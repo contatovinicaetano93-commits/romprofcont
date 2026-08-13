@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { users } from "@/db/schema";
 import { createSession, verifyPassword } from "@/lib/auth";
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const body = loginSchema.parse(await request.json());
     const email = body.email.trim().toLowerCase();
 
-    const [user] = await db
+    const [user] = await getDb()
       .select()
       .from(users)
       .where(eq(users.email, email))
