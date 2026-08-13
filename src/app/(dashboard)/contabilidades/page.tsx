@@ -1,18 +1,5 @@
-function PlaceholderPage({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-xl border bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <p className="text-slate-500 mt-2">{description}</p>
-      <p className="text-sm text-slate-400 mt-4">Em construção — Fase 4 do SETUP.md</p>
-    </div>
-  );
-}
+import { ContabilidadesClient } from "./contabilidades-client";
 
 export default function ContabilidadesPage() {
-  return (
-    <PlaceholderPage
-      title="Contabilidades"
-      description="Cadastro dos escritórios parceiros."
-    />
-  );
+  return <ContabilidadesClient />;
 }

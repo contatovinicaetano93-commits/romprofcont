@@ -42,6 +42,7 @@ export const users = pgTable("users", {
 
 export const contabilidades = pgTable("contabilidades", {
   id: uuid("id").primaryKey().defaultRandom(),
+  skipId: text("skip_id"),
   name: text("name").notNull(),
   cnpj: text("cnpj"),
   email: text("email"),
@@ -53,6 +54,7 @@ export const contabilidades = pgTable("contabilidades", {
 
 export const profissionais = pgTable("profissionais", {
   id: uuid("id").primaryKey().defaultRandom(),
+  skipId: text("skip_id"),
   contabilidadeId: uuid("contabilidade_id")
     .notNull()
     .references(() => contabilidades.id),
@@ -61,6 +63,9 @@ export const profissionais = pgTable("profissionais", {
   cpf: text("cpf"),
   email: text("email"),
   regime: text("regime"),
+  unidade: text("unidade").default("ROM Brasil"),
+  regimeTributario: text("regime_tributario").default("Simples Nacional"),
+  emailContabilidade: text("email_contabilidade"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -68,11 +73,15 @@ export const profissionais = pgTable("profissionais", {
 
 export const obrigacoes = pgTable("obrigacoes", {
   id: uuid("id").primaryKey().defaultRandom(),
+  skipId: text("skip_id"),
   profissionalId: uuid("profissional_id")
     .notNull()
     .references(() => profissionais.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
+  name: text("name"),
   tipo: text("tipo"),
+  valorEsperado: numeric("valor_esperado", { precision: 14, scale: 2 }),
+  vencimento: text("vencimento").default("Dia 20 de cada mês"),
+  regras: text("regras").default("Padrão (tolerância 5%)"),
   periodicidade: periodicidadeEnum("periodicidade").notNull().default("Mensal"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -96,11 +105,14 @@ export const emailLogs = pgTable("email_logs", {
 
 export const documentos = pgTable("documentos", {
   id: uuid("id").primaryKey().defaultRandom(),
+  skipId: text("skip_id"),
   profissionalId: uuid("profissional_id").references(() => profissionais.id),
   contabilidadeId: uuid("contabilidade_id").references(() => contabilidades.id),
   obrigacaoId: uuid("obrigacao_id").references(() => obrigacoes.id),
   competencia: text("competencia").notNull(),
   status: documentoStatusEnum("status").notNull().default("pendente_validacao"),
+  cnpj: text("cnpj"),
+  tipo: text("tipo"),
   tipoArquivo: text("tipo_arquivo"),
   fileName: text("file_name"),
   filePath: text("file_path"),
@@ -109,6 +121,11 @@ export const documentos = pgTable("documentos", {
   destinatarioCnpj: text("destinatario_cnpj"),
   valor: numeric("valor", { precision: 14, scale: 2 }),
   chaveNfe: text("chave_nfe"),
+  motivo: text("motivo"),
+  acaoNecessaria: text("acao_necessaria"),
+  dataVencimento: text("data_vencimento"),
+  unidade: text("unidade"),
+  validacoes: jsonb("validacoes").notNull().default([]),
   metadata: jsonb("metadata").notNull().default({}),
   origem: text("origem").notNull().default("manual"),
   emailLogId: uuid("email_log_id").references(() => emailLogs.id),

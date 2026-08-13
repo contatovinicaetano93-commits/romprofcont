@@ -1,82 +1,52 @@
-const checklist = [
-  {
-    phase: "Agora (você)",
-    items: [
-      "Criar projeto no Neon → copiar DATABASE_URL",
-      "Copiar .env.example → .env.local e preencher variáveis",
-      "Rodar db/001_schema.sql no SQL Editor do Neon",
-    ],
-  },
-  {
-    phase: "Em seguida (dev)",
-    items: [
-      "Login + sessão",
-      "CRUD Contabilidades e Base Mestre",
-      "Upload e validação de documentos (XML/PDF)",
-      "Dashboard com KPIs",
-    ],
-  },
-  {
-    phase: "Integração e-mail",
-    items: [
-      "Deploy na Vercel",
-      "Power Automate → impostoparceiro@romconcept.com",
-      "POST /api/email/inbound com anexos",
-    ],
-  },
-];
+import { asc, desc } from "drizzle-orm";
+import {
+  contabilidades,
+  documentos,
+  obrigacoes,
+  profissionais,
+} from "@/db/schema";
+import { getDb } from "@/lib/db";
+import { formatCompetenciaMonth } from "@/lib/types";
+import { DashboardClient } from "./dashboard-client";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const db = getDb();
+
+  const [docs, obrs, profs, conts] = await Promise.all([
+    db.select().from(documentos).orderBy(desc(documentos.createdAt)),
+    db.select().from(obrigacoes),
+    db.select().from(profissionais),
+    db.select().from(contabilidades).orderBy(asc(contabilidades.name)),
+  ]);
+
+  const competencias = [...new Set(docs.map((d) => d.competencia))].sort().reverse();
+  const expectedMensal = obrs.filter((o) => o.periodicidade === "Mensal").length;
+
+  const compliance = conts.map((c) => {
+    const profIds = profs.filter((p) => p.contabilidadeId === c.id).map((p) => p.id);
+    const expected = obrs.filter((o) => profIds.includes(o.profissionalId)).length;
+    const received = docs.filter((d) => d.contabilidadeId === c.id).length;
+    const approved = docs.filter(
+      (d) => d.contabilidadeId === c.id && d.status === "aprovado",
+    ).length;
+    const pending = Math.max(0, expected - approved);
+    const compliancePct = expected > 0 ? Math.round((approved / expected) * 100) : 100;
+    return { id: c.id, name: c.name, expected, received, approved, pending, compliancePct };
+  });
+
+  const chartCompetencias = competencias.slice(0, 5).reverse().map((comp) => ({
+    competencia: formatCompetenciaMonth(comp).split("/")[0],
+    esperado: expectedMensal,
+    recebido: docs.filter((d) => d.competencia === comp).length,
+  }));
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Controle de fiscal e contabil parceiros/profissionais
-        </h1>
-        <p className="text-slate-500 mt-1">
-          Clone do Skip — Next.js + Neon. Veja o guia completo em{" "}
-          <code className="text-sm bg-slate-100 px-1.5 py-0.5 rounded">
-            docs/SETUP.md
-          </code>
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {[
-          { label: "Esperados", value: "—", color: "bg-indigo-600" },
-          { label: "Recebidos", value: "—", color: "bg-blue-600" },
-          { label: "Aprovados", value: "—", color: "bg-green-600" },
-          { label: "Pendentes", value: "—", color: "bg-yellow-500" },
-          { label: "Reprovados", value: "—", color: "bg-red-600" },
-        ].map((kpi) => (
-          <div
-            key={kpi.label}
-            className="rounded-xl border bg-white p-4 shadow-sm"
-          >
-            <p className="text-sm text-slate-500">{kpi.label}</p>
-            <p className="text-3xl font-bold mt-1">{kpi.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-xl border bg-white p-6 shadow-sm space-y-6">
-        <h2 className="text-lg font-semibold">O que criar — passo a passo</h2>
-        {checklist.map((section) => (
-          <div key={section.phase}>
-            <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wide mb-2">
-              {section.phase}
-            </h3>
-            <ul className="space-y-2">
-              {section.items.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-slate-700">
-                  <span className="mt-0.5 h-4 w-4 rounded border border-slate-300 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
+    <DashboardClient
+      initialCompetencias={["todas", ...competencias]}
+      initialDocs={docs}
+      expectedMensal={expectedMensal}
+      compliance={compliance}
+      chartCompetencias={chartCompetencias}
+    />
   );
 }

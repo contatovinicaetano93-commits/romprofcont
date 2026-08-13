@@ -1,18 +1,14 @@
-function PlaceholderPage({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-xl border bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <p className="text-slate-500 mt-2">{description}</p>
-      <p className="text-sm text-slate-400 mt-4">Em construção — Fase 4 do SETUP.md</p>
-    </div>
-  );
-}
-
 export default function AssistentePage() {
   return (
-    <PlaceholderPage
-      title="Assistente"
-      description="Análise e perguntas sobre documentos e pendências (fase 2)."
-    />
+    <div className="rounded-xl border bg-white p-8 shadow-sm max-w-2xl">
+      <h1 className="text-2xl font-bold">Assistente</h1>
+      <p className="text-slate-500 mt-2">
+        Analista de Controladoria & Contas a Pagar — em breve nesta versão.
+      </p>
+      <p className="text-sm text-slate-400 mt-4">
+        No Skip original, este módulo usa IA para consultar pendências, explicar regras de
+        validação e resumir compliance. Será adicionado na próxima iteração.
+      </p>
+    </div>
   );
 }
