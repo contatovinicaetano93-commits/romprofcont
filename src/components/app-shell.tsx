@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   AlertCircle,
   Bot,
@@ -12,6 +12,7 @@ import {
   LogOut,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import type { SessionUser } from "@/lib/auth";
 import { navItems } from "@/lib/navigation";
 
 const iconMap = {
@@ -23,8 +24,21 @@ const iconMap = {
   Bot,
 } as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  user,
+}: {
+  children: ReactNode;
+  user: SessionUser;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -64,8 +78,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/10">
+          <div className="mb-2 flex items-center gap-2 px-3 py-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{user.name}</p>
+              <p className="truncate text-xs text-white/50">{user.email}</p>
+            </div>
+          </div>
           <button
             type="button"
+            onClick={handleLogout}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
           >
             <LogOut className="h-4 w-4" />

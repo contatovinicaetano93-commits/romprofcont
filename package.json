@@ -9,12 +9,14 @@
     "lint": "eslint",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:seed": "node --env-file=.env.local scripts/seed-admin.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.8",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
     "react": "19.2.8",
