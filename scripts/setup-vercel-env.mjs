@@ -38,6 +38,7 @@ const config = [
   { key: "IMAP_PORT", sensitive: false },
   { key: "IMAP_USER", sensitive: false },
   { key: "IMAP_PASSWORD", sensitive: true },
+  { key: "AI_MODEL", sensitive: false },
   { key: "NEXT_PUBLIC_APP_URL", sensitive: false },
 ];
 

@@ -17,7 +17,9 @@
     "email:reprocess": "tsx --env-file=.env.local scripts/reprocess-imap-emails.ts"
   },
   "dependencies": {
+    "@ai-sdk/react": "^3.0.259",
     "@neondatabase/serverless": "^1.1.0",
+    "ai": "^6.0.256",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
     "imapflow": "^1.7.1",
