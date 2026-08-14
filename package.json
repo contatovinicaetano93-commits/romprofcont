@@ -11,14 +11,17 @@
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:seed": "node --env-file=.env.local scripts/seed-admin.mjs",
-    "db:import-skip": "node --env-file=.env.local scripts/import-from-skip.mjs"
+    "db:import-skip": "node --env-file=.env.local scripts/import-from-skip.mjs",
+    "email:sync": "tsx --env-file=.env.local scripts/sync-email-test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
+    "imapflow": "^1.7.1",
     "jose": "^6.2.8",
     "lucide-react": "^1.31.0",
+    "mailparser": "^3.9.15",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -28,6 +31,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -35,6 +39,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

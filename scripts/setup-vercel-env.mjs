@@ -33,6 +33,11 @@ const config = [
   { key: "DATABASE_URL", sensitive: true },
   { key: "AUTH_SECRET", sensitive: true },
   { key: "INBOUND_EMAIL_SECRET", sensitive: true },
+  { key: "CRON_SECRET", sensitive: true },
+  { key: "IMAP_HOST", sensitive: false },
+  { key: "IMAP_PORT", sensitive: false },
+  { key: "IMAP_USER", sensitive: false },
+  { key: "IMAP_PASSWORD", sensitive: true },
   { key: "NEXT_PUBLIC_APP_URL", sensitive: false },
 ];
 
