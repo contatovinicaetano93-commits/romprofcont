@@ -12,7 +12,9 @@
     "db:generate": "drizzle-kit generate",
     "db:seed": "node --env-file=.env.local scripts/seed-admin.mjs",
     "db:import-skip": "node --env-file=.env.local scripts/import-from-skip.mjs",
-    "email:sync": "tsx --env-file=.env.local scripts/sync-email-test.ts"
+    "email:sync": "tsx --env-file=.env.local scripts/sync-email-test.ts",
+    "email:fix-docs": "tsx --env-file=.env.local scripts/fix-email-documents.ts",
+    "email:reprocess": "tsx --env-file=.env.local scripts/reprocess-imap-emails.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -23,6 +25,7 @@
     "lucide-react": "^1.31.0",
     "mailparser": "^3.9.15",
     "next": "16.3.0",
+    "pdf-parse": "^1.1.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",

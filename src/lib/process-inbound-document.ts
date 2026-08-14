@@ -1,12 +1,7 @@
 import { documentos, obrigacoes, profissionais } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import {
-  extractCnpjFromText,
-  extractFromXml,
-  extractValorFromText,
-  guessTipoFromText,
-  validateDocument,
-} from "@/lib/validate-document";
+import { extractFromContent } from "@/lib/extract-document-fields";
+import { validateDocument } from "@/lib/validate-document";
 
 type ProcessOptions = {
   text: string;
@@ -24,31 +19,34 @@ async function loadValidationContext() {
   return { profs, obrs };
 }
 
-function extractFromContent(text: string, fileName?: string, hint = "") {
-  const combined = `${text}\n${hint}`;
-  const isXml =
-    (fileName?.toLowerCase().endsWith(".xml") ?? false) ||
-    text.includes("<nfeProc") ||
-    text.includes("<NFe") ||
-    text.includes("<?xml");
-
-  if (isXml) {
-    return extractFromXml(text);
+function hasMinimalData(extracted: ReturnType<typeof extractFromContent>, fileName?: string) {
+  if (extracted.cnpj || extracted.valor || extracted.competencia) return true;
+  if (fileName && fileName !== "corpo-email.txt" && guessAttachmentName(fileName)) {
+    return true;
   }
+  return false;
+}
 
-  return {
-    cnpj: extractCnpjFromText(combined),
-    tipo: guessTipoFromText(combined),
-    valor: extractValorFromText(combined),
-    competencia: undefined as string | undefined,
-  };
+function guessAttachmentName(fileName: string) {
+  return /\.(pdf|xml)$/i.test(fileName);
+}
+
+function guessTipoFromText(text: string): string {
+  const upper = text.toUpperCase();
+  if (upper.includes("DAS")) return "DAS";
+  if (upper.includes("DARF")) return "DARF";
+  return "Outros";
 }
 
 export async function processInboundDocument(options: ProcessOptions) {
   const { text, fileName, hint = "", emailLogId } = options;
-  if (!text.trim()) return null;
+  const isBodyOnly = fileName === "corpo-email.txt";
+
+  if (!text.trim() && !fileName) return null;
 
   const extracted = extractFromContent(text, fileName, hint);
+  if (!hasMinimalData(extracted, fileName)) return null;
+
   const { profs, obrs } = await loadValidationContext();
 
   const result = validateDocument(
@@ -71,7 +69,15 @@ export async function processInboundDocument(options: ProcessOptions) {
 
   const competencia =
     result.competencia ||
+    extracted.competencia ||
     `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
+
+  const tipo =
+    result.tipo !== "Outros"
+      ? result.tipo
+      : isBodyOnly
+        ? guessTipoFromText(`${hint}\n${text}`)
+        : guessTipoFromText(fileName ?? text);
 
   const [row] = await getDb()
     .insert(documentos)
@@ -81,11 +87,11 @@ export async function processInboundDocument(options: ProcessOptions) {
       obrigacaoId: result.obrigacaoId,
       competencia,
       status: result.status,
-      cnpj: result.cnpj || null,
-      tipo: result.tipo,
+      cnpj: result.cnpj || extracted.cnpj || null,
+      tipo,
       tipoArquivo: fileName?.split(".").pop()?.toLowerCase() ?? null,
       fileName: fileName ?? null,
-      valor: result.valor ? String(result.valor) : null,
+      valor: (result.valor || extracted.valor) ? String(result.valor || extracted.valor) : null,
       motivo: result.motivo,
       acaoNecessaria: result.acaoNecessaria,
       unidade: result.unidade,
@@ -104,12 +110,23 @@ export async function processInboundParts(
   hint: string,
   emailLogId?: string,
 ) {
+  const attachmentParts = parts.filter((p) => p.fileName !== "corpo-email.txt");
+  const bodyPart = parts.find((p) => p.fileName === "corpo-email.txt");
+  const bodyHint = bodyPart ? `${hint}\n${bodyPart.text}` : hint;
+
+  const toProcess =
+    attachmentParts.length > 0
+      ? attachmentParts
+      : bodyPart
+        ? [bodyPart]
+        : [];
+
   let count = 0;
-  for (const part of parts) {
+  for (const part of toProcess) {
     const id = await processInboundDocument({
       text: part.text,
       fileName: part.fileName,
-      hint,
+      hint: bodyHint,
       emailLogId,
     });
     if (id) count += 1;

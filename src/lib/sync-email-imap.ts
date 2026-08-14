@@ -32,6 +32,17 @@ async function attachmentToText(attachment: Attachment) {
 
   const fileName = attachment.filename ?? "anexo";
   const lower = fileName.toLowerCase();
+
+  if (lower.endsWith(".pdf")) {
+    try {
+      const pdf = (await import("pdf-parse")).default;
+      const parsed = await pdf(content);
+      return { text: parsed.text ?? "", fileName };
+    } catch {
+      return { text: "", fileName };
+    }
+  }
+
   const isTextLike =
     lower.endsWith(".xml") ||
     lower.endsWith(".txt") ||
@@ -39,7 +50,7 @@ async function attachmentToText(attachment: Attachment) {
     attachment.contentType?.includes("xml") ||
     attachment.contentType?.includes("text");
 
-  if (!isTextLike && !lower.endsWith(".pdf")) {
+  if (!isTextLike) {
     return null;
   }
 

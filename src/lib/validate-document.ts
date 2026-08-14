@@ -1,5 +1,13 @@
 import type { ValidacaoItem } from "@/lib/types";
 import { normalizeCnpj } from "@/lib/types";
+import type { ExtractedDoc } from "@/lib/extract-document-fields";
+import {
+  extractFromContent,
+  extractFromXml,
+  extractValorFromText,
+  guessTipoFromText,
+  extractBestCnpj,
+} from "@/lib/extract-document-fields";
 
 type Profissional = {
   id: string;
@@ -15,14 +23,6 @@ type Obrigacao = {
   tipo: string | null;
   valorEsperado: string | null;
   regras: string | null;
-};
-
-type ExtractedDoc = {
-  cnpj?: string;
-  tipo?: string;
-  competencia?: string;
-  valor?: number;
-  dataVencimento?: string;
 };
 
 function parseTolerance(regras: string | null | undefined) {
@@ -150,56 +150,13 @@ export function validateDocument(
   };
 }
 
-export function extractFromXml(xml: string): ExtractedDoc {
-  const getTag = (tag: string) => {
-    const match = xml.match(new RegExp(`<${tag}[^>]*>([^<]+)</${tag}>`, "i"));
-    return match?.[1]?.trim();
-  };
-
-  const cnpj =
-    getTag("CNPJ") ??
-    getTag("CNPJDest") ??
-    getTag("CNPJEmit") ??
-    undefined;
-
-  const valorStr = getTag("vNF") ?? getTag("vProd");
-  const valor = valorStr ? parseFloat(valorStr) : undefined;
-
-  const dhEmi = getTag("dhEmi") ?? getTag("dEmi");
-  let competencia: string | undefined;
-  if (dhEmi) {
-    const date = new Date(dhEmi.slice(0, 10));
-    if (!Number.isNaN(date.getTime())) {
-      competencia = `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
-    }
-  }
-
-  return {
-    cnpj,
-    tipo: "Outros",
-    competencia,
-    valor,
-    dataVencimento: undefined,
-  };
-}
-
-export function guessTipoFromText(text: string): string {
-  const upper = text.toUpperCase();
-  if (upper.includes(" DAS ") || upper.startsWith("DAS")) return "DAS";
-  if (upper.includes(" DARF ") || upper.startsWith("DARF")) return "DARF";
-  if (upper.includes("MENSALIDADE")) return "Mensalidade PJ";
-  return "Outros";
-}
+export {
+  extractFromContent,
+  extractFromXml,
+  extractValorFromText,
+  guessTipoFromText,
+};
 
 export function extractCnpjFromText(text: string) {
-  const match = text.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
-  return match?.[0];
-}
-
-export function extractValorFromText(text: string) {
-  const match = text.match(/R\$\s*([\d.,]+)/i);
-  if (!match) return undefined;
-  const normalized = match[1].replace(/\./g, "").replace(",", ".");
-  const value = parseFloat(normalized);
-  return Number.isFinite(value) ? value : undefined;
+  return extractBestCnpj(text);
 }

@@ -1,13 +1,8 @@
 import { contabilidades, documentos, obrigacoes, profissionais } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { requireSession } from "@/lib/require-session";
-import {
-  extractCnpjFromText,
-  extractFromXml,
-  extractValorFromText,
-  guessTipoFromText,
-  validateDocument,
-} from "@/lib/validate-document";
+import { extractFromContent } from "@/lib/extract-document-fields";
+import { validateDocument } from "@/lib/validate-document";
 
 async function loadValidationContext() {
   const db = getDb();
@@ -34,16 +29,7 @@ export async function POST(request: Request) {
   for (const file of files) {
     const buffer = await file.arrayBuffer();
     const text = new TextDecoder().decode(buffer);
-    const isXml = file.name.toLowerCase().endsWith(".xml") || text.includes("<nfeProc") || text.includes("<NFe");
-
-    const extracted = isXml
-      ? extractFromXml(text)
-      : {
-          cnpj: extractCnpjFromText(text + hint),
-          tipo: guessTipoFromText(text + hint),
-          valor: extractValorFromText(text + hint),
-          competencia: undefined as string | undefined,
-        };
+    const extracted = extractFromContent(text, file.name, hint);
 
     const result = validateDocument(
       extracted,
