@@ -116,7 +116,7 @@ Marque conforme for concluindo:
 - [ ] **4.4** CRUD Contabilidades
 - [ ] **4.5** CRUD Base Mestre (profissionais + obrigações)
 - [ ] **4.6** Upload manual de documentos (XML + PDF)
-- [ ] **4.7** Validação automática (nota vs Base Mestre)
+- [x] **4.7** Organização automática (CNPJ/escritório); aprovação só humana
 - [ ] **4.8** Dashboard com KPIs e gráficos
 - [ ] **4.9** Pendências (obrigações não recebidas)
 - [x] **4.10** Sync IMAP (`/api/cron/sync-email`) — pastas das contabilidades + Resolvido
@@ -130,7 +130,7 @@ Marque conforme for concluindo:
 
 1. Cadastre 1 contabilidade + 1 profissional + 1 obrigação mensal na Base Mestre
 2. Coloque um e-mail de teste (DAS/DARF) na pasta da contabilidade em `impostoparceiro@romconcept.com.br`
-3. Confirme documento criado em `/documentos` com status correto
+3. Confirme documento criado em `/documentos` como pendente de aprovação (não aprovado sozinho)
 4. Verifique dashboard atualizado
 
 ---

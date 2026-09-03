@@ -9,8 +9,8 @@ const SUGESTOES = [
   "Quais pendências temos na competência mais recente?",
   "Resuma o compliance por contabilidade.",
   "Quais documentos estão não identificados?",
-  "Explique as regras de validação automática.",
-  "O que devo cadastrar na Base Mestre para reduzir divergências?",
+  "Quais documentos estão pendentes de aprovação?",
+  "O que o sistema organiza sozinho e o que o analista precisa aprovar?",
 ];
 
 function MessageBubble({
@@ -107,7 +107,7 @@ export function AssistenteClient() {
           {visibleMessages.length === 0 && (
             <div className="space-y-4 py-6">
               <div className="mx-auto max-w-lg text-center text-slate-500 text-sm">
-                Olá! Posso ajudar com pendências, validações e resumo por
+                Olá! Posso ajudar com pendências, aprovações e resumo por
                 contabilidade. Experimente uma pergunta:
               </div>
               <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">

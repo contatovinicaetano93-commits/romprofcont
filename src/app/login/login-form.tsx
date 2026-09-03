@@ -52,7 +52,7 @@ export function LoginForm() {
             Controle de fiscal e contabil parceiros/profissionais
           </h1>
           <p className="mt-1 text-sm text-white/60">
-            Sistema de validação e controle de obrigações
+            Organização automática e aprovação humana das obrigações
           </p>
         </div>
 
