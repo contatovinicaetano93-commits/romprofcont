@@ -34,6 +34,14 @@ CONTABILIDADE_ALIASES = {
 
 
 def only_digits(value: object) -> str:
+    if isinstance(value, bool):
+        return ""
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        if value.is_integer():
+            return str(int(value))
+        return re.sub(r"\D", "", str(value))
     return re.sub(r"\D", "", str(value or ""))
 
 
