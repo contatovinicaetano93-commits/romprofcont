@@ -1,5 +1,6 @@
 export function currentCompetencia(date = new Date()) {
-  return `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+  const apuracao = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  return `${String(apuracao.getMonth() + 1).padStart(2, "0")}/${apuracao.getFullYear()}`;
 }
 
 export function recentCompetencias(count = 6, date = new Date()) {
