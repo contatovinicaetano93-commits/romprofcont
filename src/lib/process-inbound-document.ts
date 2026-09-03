@@ -8,6 +8,13 @@ type ProcessOptions = {
   fileName?: string;
   hint?: string;
   emailLogId?: string;
+  folder?: string;
+  contabilidadeId?: string | null;
+};
+
+export type InboundContext = {
+  folder?: string;
+  contabilidadeId?: string | null;
 };
 
 async function loadValidationContext() {
@@ -39,7 +46,7 @@ function guessTipoFromText(text: string): string {
 }
 
 export async function processInboundDocument(options: ProcessOptions) {
-  const { text, fileName, hint = "", emailLogId } = options;
+  const { text, fileName, hint = "", emailLogId, folder } = options;
   const isBodyOnly = fileName === "corpo-email.txt";
 
   if (!text.trim() && !fileName) return null;
@@ -79,11 +86,15 @@ export async function processInboundDocument(options: ProcessOptions) {
         ? guessTipoFromText(`${hint}\n${text}`)
         : guessTipoFromText(fileName ?? text);
 
+  const contabilidadeId = result.profissionalId
+    ? result.contabilidadeId
+    : (result.contabilidadeId ?? options.contabilidadeId ?? null);
+
   const [row] = await getDb()
     .insert(documentos)
     .values({
       profissionalId: result.profissionalId,
-      contabilidadeId: result.contabilidadeId,
+      contabilidadeId,
       obrigacaoId: result.obrigacaoId,
       competencia,
       status: result.status,
@@ -98,7 +109,11 @@ export async function processInboundDocument(options: ProcessOptions) {
       validacoes: result.validacoes,
       origem: "email",
       emailLogId: emailLogId ?? null,
-      metadata: { source: "imap", fileName: fileName ?? null },
+      metadata: {
+        source: "imap",
+        fileName: fileName ?? null,
+        folder: folder ?? null,
+      },
     })
     .returning({ id: documentos.id });
 
@@ -109,6 +124,7 @@ export async function processInboundParts(
   parts: Array<{ text: string; fileName?: string }>,
   hint: string,
   emailLogId?: string,
+  context?: InboundContext,
 ) {
   const attachmentParts = parts.filter((p) => p.fileName !== "corpo-email.txt");
   const bodyPart = parts.find((p) => p.fileName === "corpo-email.txt");
@@ -128,6 +144,8 @@ export async function processInboundParts(
       fileName: part.fileName,
       hint: bodyHint,
       emailLogId,
+      folder: context?.folder,
+      contabilidadeId: context?.contabilidadeId,
     });
     if (id) count += 1;
   }
