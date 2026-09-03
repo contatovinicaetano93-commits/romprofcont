@@ -1,4 +1,4 @@
-import pdfParse from "pdf-parse";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { simpleParser, type Attachment } from "mailparser";
 import { ImapFlow, type ListResponse, type MailboxLockObject } from "imapflow";
 import { eq } from "drizzle-orm";

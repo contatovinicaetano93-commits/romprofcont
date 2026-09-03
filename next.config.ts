@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // pdf-parse's package entry runs a debug fixture when bundled.
+  serverExternalPackages: ["pdf-parse"],
 };
 
 export default nextConfig;
