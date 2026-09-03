@@ -55,6 +55,27 @@ export function extractBestCnpj(...sources: string[]) {
   return undefined;
 }
 
+/** Prefers a CNPJ that exists in the Base Mestre; otherwise the first valid CNPJ. */
+export function pickMatchingCnpj(
+  sources: string[],
+  knownCnpjs: Iterable<string | null | undefined>,
+) {
+  const known = new Set(
+    [...knownCnpjs]
+      .map((value) => normalizeCnpjDigits(value ?? ""))
+      .filter((digits) => digits.length === 14),
+  );
+  const found: string[] = [];
+  for (const source of sources) {
+    for (const digits of extractCnpjCandidates(source)) {
+      if (!found.includes(digits)) found.push(digits);
+    }
+  }
+  const matched = found.find((digits) => known.has(digits));
+  const chosen = matched ?? found[0];
+  return chosen ? formatCnpj(chosen) : undefined;
+}
+
 export function extractValorFromText(text: string) {
   const patterns = [
     /R\$\s*([\d.]+,\d{2})/gi,
