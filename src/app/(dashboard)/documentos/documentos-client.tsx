@@ -105,7 +105,9 @@ export function DocumentosClient() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Documentos</h1>
-        <p className="text-slate-500">Notas recebidas e validação automática</p>
+        <p className="text-slate-500">
+          O sistema organiza os documentos; a aprovação é feita por um analista
+        </p>
       </div>
 
       <div className="flex gap-2 border-b flex-wrap">
@@ -125,7 +127,7 @@ export function DocumentosClient() {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 rounded-md border px-3 text-sm">
               <option value="todos">Todos os status</option>
               <option value="aprovado">Aprovado</option>
-              <option value="pendente_validacao">Pendente</option>
+              <option value="pendente_validacao">Pendente de aprovação</option>
               <option value="reprovado">Reprovado</option>
               <option value="nao_identificado">Não identificado</option>
             </select>
@@ -171,7 +173,7 @@ export function DocumentosClient() {
           <h2 className="font-semibold flex items-center gap-2"><Upload className="h-4 w-4" /> Upload em Lote</h2>
           <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.xml" onChange={(e) => setFiles(e.target.files)} className="text-sm" />
           <button type="submit" disabled={processing || !files?.length} className="h-10 px-4 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">
-            {processing ? "Processando..." : "Processar e Validar"}
+            {processing ? "Processando..." : "Processar e organizar"}
           </button>
           {message && <p className="text-sm text-slate-600">{message}</p>}
         </form>
@@ -182,7 +184,7 @@ export function DocumentosClient() {
           <h2 className="font-semibold flex items-center gap-2"><Mail className="h-4 w-4" /> Colar E-mail do Outlook</h2>
           <textarea rows={12} value={emailContent} onChange={(e) => setEmailContent(e.target.value)} placeholder="Cole aqui o conteúdo do e-mail..." className="w-full rounded-md border px-3 py-2 text-sm font-mono" />
           <button type="submit" disabled={processing || emailContent.trim().length < 10} className="h-10 px-4 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">
-            {processing ? "Processando..." : "Processar E-mail e Validar"}
+            {processing ? "Processando..." : "Processar e organizar"}
           </button>
           {message && <p className="text-sm text-slate-600">{message}</p>}
         </form>

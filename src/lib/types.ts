@@ -17,7 +17,7 @@ export type ValidacaoItem = {
 
 export const STATUS_LABELS: Record<DocumentoStatus, string> = {
   aprovado: "APROVADO",
-  pendente_validacao: "PENDENTE DE VALIDAÇÃO",
+  pendente_validacao: "PENDENTE DE APROVAÇÃO",
   reprovado: "REPROVADO",
   nao_identificado: "NÃO IDENTIFICADO",
   arquivado: "ARQUIVADO",

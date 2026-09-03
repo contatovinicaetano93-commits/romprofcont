@@ -74,8 +74,8 @@ export function validateDocument(
   if (profissional && !obrigacao) {
     validacoes.push({
       check: "Obrigação",
-      detail: `Tipo ${tipo} não cadastrado para este profissional`,
-      result: "DIVERGÊNCIA",
+      detail: `Tipo ${tipo} sem cadastro de valor esperado — conferir na aprovação`,
+      result: "INFO",
     });
   } else if (obrigacao) {
     validacoes.push({
@@ -108,29 +108,21 @@ export function validateDocument(
     });
   }
 
-  let status: "aprovado" | "pendente_validacao" | "reprovado" | "nao_identificado" =
-    "pendente_validacao";
-  let motivo = "Aguardando validação";
-  let acaoNecessaria = "Revisar documento";
+  const hasDivergencia = validacoes.some((v) => v.result === "DIVERGÊNCIA");
 
-  if (!profissional) {
-    status = "nao_identificado";
-    motivo = "CNPJ não identificado na Base Mestre";
-    acaoNecessaria = "Cadastrar profissional ou corrigir CNPJ";
-  } else {
-    const hasDivergencia = validacoes.some((v) => v.result === "DIVERGÊNCIA");
-    const allOk = validacoes.every((v) => v.result === "OK");
+  const status: "pendente_validacao" | "nao_identificado" = profissional
+    ? "pendente_validacao"
+    : "nao_identificado";
 
-    if (allOk && !hasDivergencia) {
-      status = "aprovado";
-      motivo = "Validação automática aprovada";
-      acaoNecessaria = "Nenhuma";
-    } else if (hasDivergencia) {
-      status = "pendente_validacao";
-      motivo = "Divergência encontrada na validação automática";
-      acaoNecessaria = "Analista deve revisar e aprovar ou reprovar";
-    }
-  }
+  const motivo = profissional
+    ? hasDivergencia
+      ? "Organizado automaticamente — há pontos para conferir na aprovação"
+      : "Organizado automaticamente — aguardando aprovação"
+    : "CNPJ não identificado na Base Mestre";
+
+  const acaoNecessaria = profissional
+    ? "Aprovar ou reprovar"
+    : "Cadastrar profissional, corrigir CNPJ ou vincular na aprovação";
 
   return {
     status,

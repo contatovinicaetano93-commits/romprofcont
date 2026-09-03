@@ -98,10 +98,10 @@ export async function buildAssistenteContext() {
     pendencias: pendencias.slice(0, 25),
     compliance,
     regrasValidacao: [
-      "CNPJ do documento deve existir na Base Mestre (profissionais).",
-      "Tipo de obrigação (DAS, DARF, etc.) deve estar cadastrado para o profissional.",
-      "Valor do documento comparado ao valor esperado com tolerância padrão de 5%.",
-      "Status possíveis: aprovado, pendente_validacao, reprovado, nao_identificado, arquivado.",
+      "O sistema organiza sozinho: extrai CNPJ/tipo/valor, liga ao profissional e à contabilidade.",
+      "Nenhum documento é aprovado automaticamente — só o analista aprova ou reprova em /documentos.",
+      "Sem CNPJ na Base Mestre o status fica nao_identificado; com match, fica pendente_validacao.",
+      "Status possíveis: aprovado (humano), pendente_validacao, reprovado (humano), nao_identificado, arquivado.",
     ],
   };
 }
@@ -116,9 +116,9 @@ Responda sempre em português do Brasil, de forma clara, objetiva e profissional
 
 Você ajuda a equipe a:
 - Consultar pendências de DAS/DARF e obrigações por competência
-- Explicar divergências de validação (CNPJ, valor, tipo)
-- Resumir compliance por contabilidade
-- Orientar próximos passos (cadastrar profissional, aprovar documento, cobrar contabilidade)
+- Explicar o que o sistema já organizou (CNPJ, profissional, contabilidade, tipo)
+- Resumir o que falta o analista aprovar em /documentos
+- Orientar próximos passos (cadastrar profissional, aprovar/reprovar, cobrar contabilidade)
 
 Use APENAS os dados do contexto JSON fornecido. Se não souber, diga claramente e sugira onde verificar no sistema (Base Mestre, Documentos, Pendências).
 

@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:seed": "node --env-file=.env.local scripts/seed-admin.mjs",
     "db:import-skip": "node --env-file=.env.local scripts/import-from-skip.mjs",
+    "test": "tsx --test src/lib/*.test.ts",
     "email:sync": "tsx --env-file=.env.local scripts/sync-email-test.ts",
     "email:fix-docs": "tsx --env-file=.env.local scripts/fix-email-documents.ts",
     "email:reprocess": "tsx --env-file=.env.local scripts/reprocess-imap-emails.ts"

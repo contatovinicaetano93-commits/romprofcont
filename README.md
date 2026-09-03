@@ -23,6 +23,8 @@ docs/SETUP.md          # passo a passo do clone
 
 ## Integração e-mail
 
-Notas enviadas para `impostoparceiro@romconcept.com` → Power Automate → `POST /api/email/inbound`
+Caixa Locaweb `impostoparceiro@romconcept.com.br` → cron Vercel `GET /api/cron/sync-email` (IMAP, a cada 10 min).
 
-Detalhes na Fase 2 do SETUP.md.
+O sync lê as pastas das contabilidades (não só a INBOX), cria documentos em `/documentos` e move o e-mail processado para `INBOX.Resolvido`.
+
+Detalhes na Fase 2 do [`docs/SETUP.md`](docs/SETUP.md).

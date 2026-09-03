@@ -17,7 +17,7 @@ Este guia segue a ordem em que você precisa criar cada coisa. Não pule etapas.
 | Contabilidades | `/contabilidades` | Escritórios parceiros |
 | Base Mestre | `/base-mestre` | Profissionais + obrigações esperadas |
 | Assistente | `/assistente` | Chat/análise (fase 2) |
-| API e-mail | `POST /api/email/inbound` | Recebe notas de `impostoparceiro@romconcept.com` |
+| API e-mail | `GET /api/cron/sync-email` | Lê IMAP (pastas das contabilidades) e cria documentos |
 
 ---
 
@@ -64,45 +64,33 @@ Copie `.env.example` → `.env.local` e preencha:
 |----------|------------|
 | `DATABASE_URL` | Neon Console |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
-| `INBOUND_EMAIL_SECRET` | string longa que você inventa (Power Automate usa isso) |
+| `CRON_SECRET` | Bearer do cron Vercel (`/api/cron/sync-email`) |
+| `IMAP_HOST` | `email-ssl.com.br` |
+| `IMAP_PORT` | `993` |
+| `IMAP_USER` | `impostoparceiro@romconcept.com.br` |
+| `IMAP_PASSWORD` | senha da caixa Locaweb |
+| `IMAP_MAX_PER_RUN` | teto por execução (padrão 20; o cron tem 60s) |
+| `IMAP_RESOLVED_MAILBOX` | pasta destino após processar (padrão `INBOX.Resolvido`) |
 
 ---
 
-## Fase 2 — E-mail automático (Microsoft 365)
+## Fase 2 — E-mail automático (IMAP Locaweb)
 
-Caixa: **`impostoparceiro@romconcept.com`**
+Caixa: **`impostoparceiro@romconcept.com.br`**
 
-### Opção recomendada: Power Automate
+O app **não** usa Power Automate nem `POST /api/email/inbound`. O caminho real é IMAP:
 
-1. [make.powerautomate.com](https://make.powerautomate.com)
-2. **Create** → **Automated cloud flow**
-3. Trigger: **When a new email arrives (V3)** — Outlook
-   - Folder: Inbox
-   - Mailbox: `impostoparceiro@romconcept.com`
-   - Include Attachments: **Yes**
-4. Condição (opcional): anexo presente OU assunto contém "NF" / "nota"
-5. Ação: **HTTP** → POST
+1. Configure `IMAP_*` e `CRON_SECRET` na Vercel (Production + Preview)
+2. O cron em `vercel.json` chama `GET /api/cron/sync-email` a cada 10 minutos
+3. O sync percorre as pastas das contabilidades (`INBOX.Yamada`, `INBOX.Contbell`, …), ignora enviadas/lixo/rascunho/`Resolvido` e processa e-mails ainda não registrados em `email_logs` (lidos ou não)
+4. Cada e-mail vira documento(s) em `/documentos`, com a contabilidade da pasta quando o CNPJ não casa na Base Mestre
+5. Após sucesso (ou se o `message-id` já estava no banco), a mensagem vai para `INBOX.Resolvido`
 
+Teste local:
+
+```bash
+IMAP_MAX_PER_RUN=3 npm run email:sync
 ```
-URL:     https://SEU-DOMINIO/api/email/inbound
-Method:  POST
-Headers: Authorization: Bearer SEU_INBOUND_EMAIL_SECRET
-         Content-Type: application/json
-Body:
-{
-  "from": "@{triggerOutputs()?['body/from']}",
-  "subject": "@{triggerOutputs()?['body/subject']}",
-  "body": "@{triggerOutputs()?['body/body']}",
-  "receivedAt": "@{triggerOutputs()?['body/receivedDateTime']}",
-  "attachments": [...]
-}
-```
-
-> Enquanto não tiver deploy, teste local com [ngrok](https://ngrok.com) apontando para `localhost:3000`.
-
-### Alternativa: encaminhamento + webhook
-
-Encaminhar e-mails para serviço tipo Mailgun Inbound Parse → webhook na mesma URL.
 
 ---
 
@@ -128,21 +116,21 @@ Marque conforme for concluindo:
 - [ ] **4.4** CRUD Contabilidades
 - [ ] **4.5** CRUD Base Mestre (profissionais + obrigações)
 - [ ] **4.6** Upload manual de documentos (XML + PDF)
-- [ ] **4.7** Validação automática (nota vs Base Mestre)
+- [x] **4.7** Organização automática (CNPJ/escritório); aprovação só humana
 - [ ] **4.8** Dashboard com KPIs e gráficos
 - [ ] **4.9** Pendências (obrigações não recebidas)
-- [ ] **4.10** API inbound e-mail (`/api/email/inbound`)
+- [x] **4.10** Sync IMAP (`/api/cron/sync-email`) — pastas das contabilidades + Resolvido
 - [ ] **4.11** Parser XML NF-e + extração PDF
 - [ ] **4.12** Assistente IA (opcional, fase 2)
-- [ ] **4.13** Deploy Vercel + Power Automate apontando para produção
+- [ ] **4.13** Conferir cron Vercel + IMAP em produção (pastas → `/documentos`)
 
 ---
 
 ## Fase 5 — Teste end-to-end
 
 1. Cadastre 1 contabilidade + 1 profissional + 1 obrigação mensal na Base Mestre
-2. Envie e-mail de teste com XML de NF-e para `impostoparceiro@romconcept.com`
-3. Confirme documento criado em `/documentos` com status correto
+2. Coloque um e-mail de teste (DAS/DARF) na pasta da contabilidade em `impostoparceiro@romconcept.com.br`
+3. Confirme documento criado em `/documentos` como pendente de aprovação (não aprovado sozinho)
 4. Verifique dashboard atualizado
 
 ---
@@ -153,6 +141,7 @@ Marque conforme for concluindo:
 npm run dev          # app local http://localhost:3000
 npm run db:push      # aplica schema no Neon
 npm run db:studio    # visualizar tabelas (Drizzle Studio)
+npm run email:sync   # puxa e-mails IMAP (usa .env.local)
 ```
 
 ---
