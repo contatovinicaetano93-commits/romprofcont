@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Mail, Upload } from "lucide-react";
+import { Download, Loader2, Mail, Upload } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency } from "@/lib/types";
 import type { DocumentoStatus } from "@/lib/types";
@@ -9,13 +9,46 @@ import type { DocumentoStatus } from "@/lib/types";
 type Documento = {
   id: string;
   profissionalName?: string;
+  contabilidadeName?: string;
   cnpj: string | null;
   tipo: string | null;
   competencia: string;
   valor: string | null;
   status: DocumentoStatus;
   motivo: string | null;
+  fileName?: string | null;
 };
+
+function csvCell(value: string) {
+  if (/[;"\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+function downloadApprovedExcel(docs: Documento[]) {
+  const rows = docs.filter((d) => d.status === "aprovado");
+  const header = ["Profissional", "CNPJ", "Contabilidade", "Tipo", "Competencia", "Valor", "Arquivo"];
+  const lines = rows.map((d) =>
+    [
+      d.profissionalName ?? "",
+      d.cnpj ?? "",
+      d.contabilidadeName ?? "",
+      d.tipo ?? "",
+      d.competencia,
+      d.valor ?? "",
+      d.fileName ?? "",
+    ]
+      .map(csvCell)
+      .join(";"),
+  );
+  const csv = `\uFEFF${[header.join(";"), ...lines].join("\n")}`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `guias-aprovadas-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export function DocumentosClient() {
   const [docs, setDocs] = useState<Documento[]>([]);
@@ -42,6 +75,7 @@ export function DocumentosClient() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return docs.filter((d) => {
+      if (d.status === "arquivado" && statusFilter !== "arquivado") return false;
       if (statusFilter !== "todos" && d.status !== statusFilter) return false;
       return (
         (d.profissionalName ?? "").toLowerCase().includes(q) ||
@@ -106,7 +140,7 @@ export function DocumentosClient() {
       <div>
         <h1 className="text-2xl font-bold">Documentos</h1>
         <p className="text-slate-500">
-          O sistema organiza os documentos; a aprovação é feita por um analista
+          Só guias DAS/DARF. O gestor aprova; depois exporta o Excel para o pagamento do dia 20.
         </p>
       </div>
 
@@ -131,6 +165,13 @@ export function DocumentosClient() {
               <option value="reprovado">Reprovado</option>
               <option value="nao_identificado">Não identificado</option>
             </select>
+            <button
+              type="button"
+              onClick={() => downloadApprovedExcel(docs)}
+              className="h-10 px-3 rounded-md border text-sm inline-flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" /> Exportar aprovados (Excel)
+            </button>
           </div>
           <div className="rounded-xl border bg-white shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
@@ -182,7 +223,7 @@ export function DocumentosClient() {
       {tab === "email" && (
         <form onSubmit={handleEmail} className="rounded-xl border bg-white p-6 space-y-4 shadow-sm">
           <h2 className="font-semibold flex items-center gap-2"><Mail className="h-4 w-4" /> Colar E-mail do Outlook</h2>
-          <textarea rows={12} value={emailContent} onChange={(e) => setEmailContent(e.target.value)} placeholder="Cole aqui o conteúdo do e-mail..." className="w-full rounded-md border px-3 py-2 text-sm font-mono" />
+          <textarea rows={12} value={emailContent} onChange={(e) => setEmailContent(e.target.value)} placeholder="Esta aba não gera guia. Prefira Upload de PDF DAS/DARF." className="w-full rounded-md border px-3 py-2 text-sm font-mono" />
           <button type="submit" disabled={processing || emailContent.trim().length < 10} className="h-10 px-4 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">
             {processing ? "Processando..." : "Processar e organizar"}
           </button>

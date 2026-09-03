@@ -1,17 +1,6 @@
-import { contabilidades, documentos, obrigacoes, profissionais } from "@/db/schema";
-import { getDb } from "@/lib/db";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { requireSession } from "@/lib/require-session";
-import { extractFromContent } from "@/lib/extract-document-fields";
-import { validateDocument } from "@/lib/validate-document";
-
-async function loadValidationContext() {
-  const db = getDb();
-  const [profs, obrs] = await Promise.all([
-    db.select().from(profissionais),
-    db.select().from(obrigacoes),
-  ]);
-  return { profs, obrs };
-}
+import { processInboundDocument } from "@/lib/process-inbound-document";
 
 export async function POST(request: Request) {
   await requireSession();
@@ -23,54 +12,30 @@ export async function POST(request: Request) {
     return Response.json({ error: "Nenhum arquivo enviado." }, { status: 400 });
   }
 
-  const { profs, obrs } = await loadValidationContext();
   let count = 0;
 
   for (const file of files) {
-    const buffer = await file.arrayBuffer();
-    const text = new TextDecoder().decode(buffer);
-    const extracted = extractFromContent(text, file.name, hint);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const lower = file.name.toLowerCase();
+    let text = "";
+    if (lower.endsWith(".pdf")) {
+      try {
+        const parsed = await pdfParse(buffer);
+        text = parsed.text ?? "";
+      } catch {
+        text = "";
+      }
+    } else {
+      text = new TextDecoder().decode(buffer);
+    }
 
-    const result = validateDocument(
-      extracted,
-      profs.map((p) => ({
-        id: p.id,
-        name: p.name,
-        cnpj: p.cnpj,
-        contabilidadeId: p.contabilidadeId,
-        unidade: p.unidade,
-      })),
-      obrs.map((o) => ({
-        id: o.id,
-        profissionalId: o.profissionalId,
-        tipo: o.tipo,
-        valorEsperado: o.valorEsperado,
-        regras: o.regras,
-      })),
-    );
-
-    const competencia =
-      result.competencia ||
-      `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
-
-    await getDb().insert(documentos).values({
-      profissionalId: result.profissionalId,
-      contabilidadeId: result.contabilidadeId,
-      obrigacaoId: result.obrigacaoId,
-      competencia,
-      status: result.status,
-      cnpj: result.cnpj || null,
-      tipo: result.tipo,
-      tipoArquivo: file.name.split(".").pop()?.toLowerCase() ?? null,
+    const id = await processInboundDocument({
+      text,
       fileName: file.name,
-      valor: result.valor ? String(result.valor) : null,
-      motivo: result.motivo,
-      acaoNecessaria: result.acaoNecessaria,
-      unidade: result.unidade,
-      validacoes: result.validacoes,
+      hint,
       origem: "upload",
     });
-    count += 1;
+    if (id) count += 1;
   }
 
   return Response.json({ count });
