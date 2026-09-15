@@ -52,17 +52,6 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     return "relatorio";
   }
 
-  const looksLikeParcelamento =
-    blob.includes("parcelamento") ||
-    blob.includes("divida ativa") ||
-    blob.includes("dividaativa") ||
-    hasWord(blob, "pgfn") ||
-    name.includes("parcelamento");
-
-  if (looksLikeParcelamento) {
-    return "guia_parcelamento";
-  }
-
   const looksLikeDarf =
     /(^|[^a-z])darf([^a-z]|$)/.test(name) ||
     blob.includes("documento de arrecadacao de receitas federais");
@@ -73,6 +62,17 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     /(^|[^a-z])das([^a-z]|$)/.test(name) ||
     blob.includes("documento de arrecadacao do simples nacional");
 
+  const looksLikeParcelamento =
+    blob.includes("parcelamento") ||
+    blob.includes("divida ativa") ||
+    blob.includes("dividaativa") ||
+    hasWord(blob, "pgfn") ||
+    name.includes("parcelamento");
+
+  if (looksLikeParcelamento && !looksLikeDas && !looksLikeDarf) {
+    return "guia_parcelamento";
+  }
+
   const looksLikeInss =
     hasWord(blob, "inss") ||
     hasWord(blob, "gps") ||
@@ -81,7 +81,15 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     blob.includes("contribuicao previdenciaria") ||
     blob.includes("documento de arrecadacao do inss");
 
-  if (looksLikeInss && !looksLikeDas) {
+  const looksLikeMensalidade =
+    name.includes("honorario") ||
+    blob.includes("honorario") ||
+    blob.includes("mensalidade") ||
+    name.includes("mensalidade") ||
+    name.includes("servicos_vencto") ||
+    name.includes("servicos-vencto");
+
+  if (looksLikeInss && !looksLikeDas && !looksLikeMensalidade) {
     return "guia_inss";
   }
   if (looksLikeDarf && !looksLikeDas) {
@@ -90,14 +98,6 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
   if (looksLikeDas) {
     return "guia_das";
   }
-
-  const looksLikeMensalidade =
-    name.includes("honorario") ||
-    blob.includes("honorario") ||
-    blob.includes("mensalidade") ||
-    name.includes("mensalidade") ||
-    name.includes("servicos_vencto") ||
-    name.includes("servicos-vencto");
 
   if (looksLikeMensalidade) {
     return "mensalidade";

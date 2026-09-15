@@ -80,6 +80,7 @@ export function DashboardClient({
   }, [filtered]);
 
   const firms = useMemo(() => {
+    const unassignedId = "__sem_contabilidade__";
     const names = new Map<string, string>();
     for (const p of profissionais) {
       names.set(p.contabilidadeId, p.contabilidadeName);
@@ -89,10 +90,15 @@ export function DashboardClient({
         names.set(d.contabilidadeId, d.contabilidadeName ?? "Sem nome");
       }
     }
+    if (filtered.some((d) => !d.contabilidadeId)) {
+      names.set(unassignedId, "Sem contabilidade");
+    }
 
     return [...names.entries()]
       .map(([id, name]) => {
-        const firmDocs = filtered.filter((d) => d.contabilidadeId === id);
+        const firmDocs = filtered.filter((d) =>
+          id === unassignedId ? !d.contabilidadeId : d.contabilidadeId === id,
+        );
         const firmProfs = profissionais.filter((p) => p.contabilidadeId === id);
         const counts = Object.fromEntries(
           DOCUMENTO_TIPOS_OPERACIONAIS.map((tipo) => [

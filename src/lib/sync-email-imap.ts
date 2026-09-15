@@ -309,7 +309,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
       await session.lockMailbox(folder.path);
 
       const uids = await session.run("search", (client) =>
-        client.search({ seen: false }, { uid: true }),
+        client.search({ all: true }, { uid: true }),
       );
       if (!Array.isArray(uids) || uids.length === 0) {
         session.dropLock();

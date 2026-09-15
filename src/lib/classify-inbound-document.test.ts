@@ -16,6 +16,13 @@ describe("classifyInboundDocument", () => {
       classifyInboundDocument("imposto.pdf", "Documento de Arrecadação do Simples Nacional"),
       "guia_das",
     );
+    assert.equal(
+      classifyInboundDocument(
+        "PGDASD-DAS- 06_2026.pdf",
+        "Simples Nacional com menção a parcelamento e Dívida Ativa PGFN",
+      ),
+      "guia_das",
+    );
     assert.equal(isDocumentoOperacional("guia_das"), true);
     assert.equal(tipoFromKind("guia_das"), "DAS");
   });
@@ -50,6 +57,13 @@ describe("classifyInboundDocument", () => {
     );
     assert.equal(
       classifyInboundDocument("boleto-mensalidade-agosto.pdf"),
+      "mensalidade",
+    );
+    assert.equal(
+      classifyInboundDocument(
+        "recibo_de_honorarios_contabeis_0000003851.pdf",
+        "Boleto com linha de INSS / GPS",
+      ),
       "mensalidade",
     );
     assert.equal(tipoFromKind("mensalidade"), "Mensalidade");
