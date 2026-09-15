@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { ConferenciaExportBar } from "@/components/conferencia-export-bar";
+import { currentCompetencia } from "@/lib/competencia";
 import type { DocumentoStatus, ObrigacaoTipo } from "@/lib/types";
 import {
   DOCUMENTO_TIPOS_OPERACIONAIS,
@@ -143,6 +145,22 @@ export function DashboardClient({
       .sort((a, b) => b.fila - a.fila || a.name.localeCompare(b.name));
   }, [filtered, profissionais, competencia]);
 
+  const exportMonth = useMemo(() => {
+    if (competencia !== "todas") return competencia;
+    const approvedMonths = [
+      ...new Set(
+        initialDocs
+          .filter((doc) => doc.status === "aprovado")
+          .map((doc) => doc.competencia),
+      ),
+    ].sort().reverse();
+    return approvedMonths[0] ?? currentCompetencia();
+  }, [competencia, initialDocs]);
+
+  const approvedForExport = initialDocs.filter(
+    (doc) => doc.status === "aprovado" && doc.competencia === exportMonth,
+  ).length;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -180,6 +198,12 @@ export function DashboardClient({
           </div>
         ))}
       </div>
+
+      <ConferenciaExportBar
+        competencias={[exportMonth]}
+        competencia={exportMonth}
+        approvedCount={approvedForExport}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {byCategory.map((row) => (

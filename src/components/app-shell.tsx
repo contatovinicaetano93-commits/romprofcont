@@ -13,16 +13,39 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { SessionUser } from "@/lib/auth";
-import { navItems } from "@/lib/navigation";
+import { assistantNavItem, navItems, navSections, type NavIcon, type NavItem } from "@/lib/navigation";
 
-const iconMap = {
+const iconMap: Record<NavIcon, typeof LayoutDashboard> = {
   LayoutDashboard,
   FileText,
   AlertCircle,
   Building2,
   Database,
   Bot,
-} as const;
+};
+
+function isActivePath(pathname: string, path: string) {
+  return pathname === path || (path !== "/" && pathname.startsWith(path));
+}
+
+function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const Icon = iconMap[item.icon];
+  const active = isActivePath(pathname, item.path);
+
+  return (
+    <Link
+      href={item.path}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        active
+          ? "bg-blue-600 text-white"
+          : "text-white/70 hover:bg-white/10 hover:text-white"
+      }`}
+    >
+      <Icon className="h-4 w-4" />
+      {item.label}
+    </Link>
+  );
+}
 
 export function AppShell({
   children,
@@ -42,40 +65,33 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="hidden md:flex w-64 flex-col bg-[hsl(222_47%_11%)] text-white fixed inset-y-0 left-0 z-50">
-        <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
+      <aside className="hidden md:flex w-60 flex-col bg-[hsl(222_47%_11%)] text-white fixed inset-y-0 left-0 z-50">
+        <div className="flex items-center gap-2 px-5 py-5 border-b border-white/10">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600">
             <FileText className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-bold leading-tight">Controle de fiscal e</p>
-            <p className="text-xs font-bold leading-tight">contabil parceiros</p>
+            <p className="text-xs font-bold leading-tight">Controle fiscal</p>
+            <p className="text-xs font-bold leading-tight">parceiros</p>
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map((item) => {
-            const Icon = iconMap[item.icon];
-            const active =
-              pathname === item.path ||
-              (item.path !== "/" && pathname.startsWith(item.path));
-
-            return (
-              <Link
-                key={item.path}
-                href={item.path}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-blue-600 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 space-y-5">
+          {navSections.map((section) => (
+            <div key={section.id} className="space-y-1">
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                {section.label}
+              </p>
+              {section.items.map((item) => (
+                <NavLink key={item.path} item={item} pathname={pathname} />
+              ))}
+            </div>
+          ))}
         </nav>
+
+        <div className="px-3 pb-2">
+          <NavLink item={assistantNavItem} pathname={pathname} />
+        </div>
 
         <div className="px-3 py-4 border-t border-white/10">
           <div className="mb-2 flex items-center gap-2 px-3 py-2">
@@ -98,11 +114,27 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="flex-1 md:ml-64">
-        <header className="sticky top-0 z-40 flex h-14 items-center border-b bg-white px-4 md:px-6">
+      <div className="flex-1 md:ml-60">
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-white px-4 md:px-6">
           <span className="font-semibold text-sm text-slate-700 md:hidden">
             romprofcont
           </span>
+          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto md:hidden">
+            {navItems.map((item) => {
+              const active = isActivePath(pathname, item.path);
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ${
+                    active ? "bg-blue-600 text-white" : "text-slate-600"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </header>
         <main className="p-4 md:p-6">{children}</main>
       </div>

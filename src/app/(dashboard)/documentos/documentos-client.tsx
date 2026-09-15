@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Download, Loader2, Mail, Upload } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Mail, Upload } from "lucide-react";
+import { ConferenciaExportBar } from "@/components/conferencia-export-bar";
 import { StatusBadge } from "@/components/status-badge";
 import {
   DOCUMENTO_TIPOS_OPERACIONAIS,
@@ -42,7 +43,6 @@ export function DocumentosClient() {
   const [tipoFilter, setTipoFilter] = useState("todos");
   const [firmFilter, setFirmFilter] = useState("todas");
   const [exportCompetencia, setExportCompetencia] = useState(currentCompetencia);
-  const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
   const [emailContent, setEmailContent] = useState("");
@@ -140,34 +140,16 @@ export function DocumentosClient() {
     return [...values].sort().reverse();
   }, [docs]);
 
-  async function exportConferencia() {
-    setExporting(true);
-    try {
-      const res = await fetch(
-        `/api/documentos/export?competencia=${encodeURIComponent(exportCompetencia)}`,
-      );
-      if (!res.ok) {
-        setMessage("Não foi possível gerar a planilha.");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `IMPOSTOS - CONFERENCIA ${exportCompetencia.replace("/", "-")}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setExporting(false);
-    }
-  }
-
   async function updateStatus(id: string, status: DocumentoStatus, motivo: string) {
     await fetch(`/api/documentos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status, motivo }),
     });
+    if (status === "aprovado") {
+      setExportCompetencia((current) => docs.find((d) => d.id === id)?.competencia || current);
+      setStatusFilter("aprovado");
+    }
     await load();
   }
 
@@ -178,6 +160,9 @@ export function DocumentosClient() {
   const filaCount = docs.filter(
     (d) => d.status === "pendente_validacao" || d.status === "nao_identificado",
   ).length;
+  const approvedForExport = docs.filter(
+    (d) => d.status === "aprovado" && d.competencia === exportCompetencia,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -185,7 +170,7 @@ export function DocumentosClient() {
         <h1 className="text-2xl font-bold">Fila de aprovação</h1>
         <p className="text-slate-500">
           DAS, INSS, parcelamento e mensalidade já vinculados a CNPJ + nome.
-          Ricardo aprova ou reprova. A planilha de conferência sai no modelo IMPOSTOS — CONFERÊNCIA, com os aprovados da competência.
+          Ricardo aprova ou reprova. A planilha só aparece depois da primeira aprovação.
         </p>
       </div>
 
@@ -228,25 +213,13 @@ export function DocumentosClient() {
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
-            <select
-              value={exportCompetencia}
-              onChange={(e) => setExportCompetencia(e.target.value)}
-              className="h-10 rounded-md border px-3 text-sm bg-white"
-            >
-              {competencias.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => void exportConferencia()}
-              disabled={exporting}
-              className="h-10 px-3 rounded-md border text-sm inline-flex items-center gap-2 bg-white disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" />
-              {exporting ? "Gerando planilha..." : "Exportar conferência"}
-            </button>
           </div>
+          <ConferenciaExportBar
+            competencias={competencias}
+            competencia={exportCompetencia}
+            approvedCount={approvedForExport}
+            onCompetenciaChange={setExportCompetencia}
+          />
           {message && tab === "lista" && (
             <p className="text-sm text-red-600">{message}</p>
           )}
