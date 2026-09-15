@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ConferenciaExportBar } from "@/components/conferencia-export-bar";
-import { currentCompetencia } from "@/lib/competencia";
+import { competenciaMonth, currentCompetencia, uniqueCompetenciaMonths } from "@/lib/competencia";
 import type { DocumentoStatus, ObrigacaoTipo } from "@/lib/types";
 import {
   DOCUMENTO_TIPOS_OPERACIONAIS,
@@ -59,7 +59,7 @@ export function DashboardClient({
 
   const filtered = useMemo(() => {
     if (competencia === "todas") return initialDocs;
-    return initialDocs.filter((d) => d.competencia === competencia);
+    return initialDocs.filter((d) => competenciaMonth(d.competencia) === competencia);
   }, [initialDocs, competencia]);
 
   const kpis = useMemo(() => ({
@@ -147,18 +147,18 @@ export function DashboardClient({
 
   const exportMonth = useMemo(() => {
     if (competencia !== "todas") return competencia;
-    const approvedMonths = [
-      ...new Set(
-        initialDocs
-          .filter((doc) => doc.status === "aprovado")
-          .map((doc) => doc.competencia),
-      ),
-    ].sort().reverse();
+    const approvedMonths = uniqueCompetenciaMonths(
+      initialDocs
+        .filter((doc) => doc.status === "aprovado")
+        .map((doc) => doc.competencia),
+    );
     return approvedMonths[0] ?? currentCompetencia();
   }, [competencia, initialDocs]);
 
   const approvedForExport = initialDocs.filter(
-    (doc) => doc.status === "aprovado" && doc.competencia === exportMonth,
+    (doc) =>
+      doc.status === "aprovado" &&
+      competenciaMonth(doc.competencia) === competenciaMonth(exportMonth),
   ).length;
 
   return (

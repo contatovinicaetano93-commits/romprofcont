@@ -445,6 +445,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
             (typeof parsed.html === "string" ? parsed.html : "") ||
             "";
 
+          const sentAt = parsed.date ?? message.envelope?.date ?? new Date();
           const [log] = await getDb()
             .insert(emailLogs)
             .values({
@@ -453,7 +454,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
               assunto,
               corpo: corpo.slice(0, 8000),
               status: "pending",
-              receivedAt: parsed.date ?? new Date(),
+              receivedAt: sentAt,
               rawPayload: { folder: folder.path, uid },
             })
             .returning({ id: emailLogs.id });
@@ -474,6 +475,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
             const created = await processInboundParts(parts, hint, log.id, {
               folder: folder.path,
               contabilidadeId: firm.id,
+              sentAt,
             });
 
             await getDb()

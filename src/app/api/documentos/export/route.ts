@@ -2,13 +2,14 @@ import { desc, eq } from "drizzle-orm";
 import {
   contabilidades,
   documentos,
+  emailLogs,
   profissionais,
 } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { requireSession } from "@/lib/require-session";
 import { buildConferenciaRows } from "@/lib/conferencia-export";
 import { writeConferenciaXlsx } from "@/lib/conferencia-xlsx";
-import { currentCompetencia } from "@/lib/competencia";
+import { competenciaForDocumento, currentCompetencia } from "@/lib/competencia";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,14 @@ export async function GET(request: Request) {
       })
       .from(profissionais)
       .leftJoin(contabilidades, eq(profissionais.contabilidadeId, contabilidades.id)),
-    db.select().from(documentos).orderBy(desc(documentos.createdAt)),
+    db
+      .select({
+        documento: documentos,
+        emailSentAt: emailLogs.receivedAt,
+      })
+      .from(documentos)
+      .leftJoin(emailLogs, eq(documentos.emailLogId, emailLogs.id))
+      .orderBy(desc(documentos.createdAt)),
   ]);
 
   const rows = buildConferenciaRows(
@@ -39,14 +47,17 @@ export async function GET(request: Request) {
       regimeTributario: row.profissional.regimeTributario,
       contabilidadeName: row.contabilidadeName,
     })),
-    docs.map((doc) => ({
-      profissionalId: doc.profissionalId,
-      competencia: doc.competencia,
-      status: doc.status,
-      tipo: doc.tipo,
-      valor: doc.valor,
-      fileName: doc.fileName,
-      metadata: doc.metadata,
+    docs.map((row) => ({
+      profissionalId: row.documento.profissionalId,
+      competencia: competenciaForDocumento({
+        competencia: row.documento.competencia,
+        emailSentAt: row.emailSentAt,
+      }),
+      status: row.documento.status,
+      tipo: row.documento.tipo,
+      valor: row.documento.valor,
+      fileName: row.documento.fileName,
+      metadata: row.documento.metadata,
     })),
     competencia,
   );

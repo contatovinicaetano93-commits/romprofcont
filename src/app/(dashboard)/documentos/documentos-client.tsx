@@ -11,7 +11,11 @@ import {
   normalizeDocumentoTipo,
 } from "@/lib/types";
 import type { DocumentoStatus } from "@/lib/types";
-import { currentCompetencia } from "@/lib/competencia";
+import {
+  competenciaMonth,
+  currentCompetencia,
+  uniqueCompetenciaMonths,
+} from "@/lib/competencia";
 
 type Documento = {
   id: string;
@@ -135,9 +139,9 @@ export function DocumentosClient() {
   }
 
   const competencias = useMemo(() => {
-    const values = new Set(docs.map((d) => d.competencia));
-    values.add(currentCompetencia());
-    return [...values].sort().reverse();
+    const values = uniqueCompetenciaMonths(docs.map((d) => d.competencia));
+    const current = currentCompetencia();
+    return values.includes(current) ? values : [current, ...values];
   }, [docs]);
 
   async function updateStatus(id: string, status: DocumentoStatus, motivo: string) {
@@ -147,7 +151,9 @@ export function DocumentosClient() {
       body: JSON.stringify({ status, motivo }),
     });
     if (status === "aprovado") {
-      setExportCompetencia((current) => docs.find((d) => d.id === id)?.competencia || current);
+      setExportCompetencia(
+        (current) => competenciaMonth(docs.find((d) => d.id === id)?.competencia || current),
+      );
       setStatusFilter("aprovado");
     }
     await load();
@@ -161,7 +167,9 @@ export function DocumentosClient() {
     (d) => d.status === "pendente_validacao" || d.status === "nao_identificado",
   ).length;
   const approvedForExport = docs.filter(
-    (d) => d.status === "aprovado" && d.competencia === exportCompetencia,
+    (d) =>
+      d.status === "aprovado" &&
+      competenciaMonth(d.competencia) === competenciaMonth(exportCompetencia),
   ).length;
 
   return (
@@ -264,7 +272,7 @@ export function DocumentosClient() {
                             </td>
                             <td className="p-3 whitespace-nowrap">{d.cnpj ?? "—"}</td>
                             <td className="p-3"><TipoBadge tipo={d.tipo} /></td>
-                            <td className="p-3">{d.competencia}</td>
+                            <td className="p-3 whitespace-nowrap">{d.competencia}</td>
                             <td className="p-3 text-right">{formatCurrency(d.valor)}</td>
                             <td className="p-3"><StatusBadge status={d.status} /></td>
                             <td className="p-3 space-x-1 whitespace-nowrap">

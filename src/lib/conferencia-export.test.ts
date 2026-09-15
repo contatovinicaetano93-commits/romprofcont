@@ -15,6 +15,7 @@ describe("conferencia export mapping", () => {
     assert.equal(mapRegimeExcel("Simples Nacional"), "SIMPLES");
     assert.equal(mapRegimeExcel("MEI"), "MEI");
     assert.equal(sheetNameForCompetencia("09/2026"), "GERAL - Setembro");
+    assert.equal(sheetNameForCompetencia("15/09/2026"), "GERAL - Setembro");
     assert.equal(extractParcelaLabel("guia parcela 21/23.pdf"), "Parcela: 21/23");
   });
 
@@ -41,21 +42,21 @@ describe("conferencia export mapping", () => {
       [
         {
           profissionalId: "p1",
-          competencia: "09/2026",
+          competencia: "15/09/2026",
           status: "aprovado",
           tipo: "Mensalidade",
           valor: "120",
         },
         {
           profissionalId: "p1",
-          competencia: "09/2026",
+          competencia: "15/09/2026",
           status: "aprovado",
           tipo: "DAS",
           valor: "6631.67",
         },
         {
           profissionalId: "p1",
-          competencia: "09/2026",
+          competencia: "15/09/2026",
           status: "aprovado",
           tipo: "Parcelamento",
           valor: "368.81",
@@ -71,7 +72,7 @@ describe("conferencia export mapping", () => {
         },
         {
           profissionalId: "p1",
-          competencia: "09/2026",
+          competencia: "15/09/2026",
           status: "pendente_validacao",
           tipo: "INSS",
           valor: "178.31",

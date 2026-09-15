@@ -1,17 +1,26 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
   contabilidades,
   documentos,
+  emailLogs,
   profissionais,
 } from "@/db/schema";
 import { getDb } from "@/lib/db";
+import { competenciaForDocumento, uniqueCompetenciaMonths } from "@/lib/competencia";
 import { DashboardClient, type DashboardDoc, type DashboardProfissional } from "./dashboard-client";
 
 export default async function DashboardPage() {
   const db = getDb();
 
   const [docs, profs, conts] = await Promise.all([
-    db.select().from(documentos).orderBy(desc(documentos.createdAt)),
+    db
+      .select({
+        documento: documentos,
+        emailSentAt: emailLogs.receivedAt,
+      })
+      .from(documentos)
+      .leftJoin(emailLogs, eq(documentos.emailLogId, emailLogs.id))
+      .orderBy(desc(documentos.createdAt)),
     db.select().from(profissionais),
     db.select().from(contabilidades),
   ]);
@@ -20,12 +29,16 @@ export default async function DashboardPage() {
   const profById = new Map(profs.map((p) => [p.id, p]));
 
   const initialDocs: DashboardDoc[] = docs
-    .filter((d) => d.status !== "arquivado")
-    .map((d) => {
+    .filter((row) => row.documento.status !== "arquivado")
+    .map((row) => {
+      const d = row.documento;
       const prof = d.profissionalId ? profById.get(d.profissionalId) : undefined;
       return {
         id: d.id,
-        competencia: d.competencia,
+        competencia: competenciaForDocumento({
+          competencia: d.competencia,
+          emailSentAt: row.emailSentAt,
+        }),
         status: d.status,
         tipo: d.tipo,
         cnpj: d.cnpj,
@@ -48,7 +61,7 @@ export default async function DashboardPage() {
     contabilidadeName: contById.get(p.contabilidadeId) ?? "Sem contabilidade",
   }));
 
-  const competencias = [...new Set(initialDocs.map((d) => d.competencia))].sort().reverse();
+  const competencias = uniqueCompetenciaMonths(initialDocs.map((d) => d.competencia));
 
   return (
     <DashboardClient

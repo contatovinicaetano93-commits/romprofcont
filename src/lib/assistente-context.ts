@@ -6,6 +6,7 @@ import {
   profissionais,
 } from "@/db/schema";
 import { getDb } from "@/lib/db";
+import { isSameCompetenciaMonth, uniqueCompetenciaMonths } from "@/lib/competencia";
 import { STATUS_LABELS } from "@/lib/types";
 
 export async function buildAssistenteContext() {
@@ -22,7 +23,7 @@ export async function buildAssistenteContext() {
       .limit(40),
   ]);
 
-  const competencias = [...new Set(docs.map((d) => d.competencia))].slice(0, 6);
+  const competencias = uniqueCompetenciaMonths(docs.map((d) => d.competencia)).slice(0, 6);
 
   const pendencias = obrs
     .map((o) => {
@@ -34,7 +35,7 @@ export async function buildAssistenteContext() {
         (d) =>
           d.profissionalId === prof.id &&
           d.tipo === o.tipo &&
-          d.competencia === competencia &&
+          isSameCompetenciaMonth(d.competencia, competencia) &&
           (d.status === "aprovado" || d.status === "pendente_validacao"),
       );
 

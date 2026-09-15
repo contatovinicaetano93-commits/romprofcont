@@ -1,3 +1,4 @@
+import { competenciaMonth, isSameCompetenciaMonth } from "@/lib/competencia";
 import { normalizeCnpj, normalizeDocumentoTipo } from "@/lib/types";
 import { extractParcelaLabel, formatCnpj } from "@/lib/extract-document-fields";
 
@@ -87,7 +88,7 @@ export function mapRegimeExcel(regime: string | null | undefined) {
 export { extractParcelaLabel };
 
 export function sheetNameForCompetencia(competencia: string) {
-  const [mm] = competencia.split("/");
+  const [mm] = competenciaMonth(competencia).split("/");
   const idx = parseInt(mm ?? "0", 10) - 1;
   return `GERAL - ${MESES_COMPLETOS[idx] ?? competencia}`;
 }
@@ -112,7 +113,10 @@ export function buildConferenciaRows(
   competencia: string,
 ): ConferenciaRow[] {
   const approved = documentos.filter(
-    (doc) => doc.status === "aprovado" && doc.competencia === competencia && doc.profissionalId,
+    (doc) =>
+      doc.status === "aprovado" &&
+      isSameCompetenciaMonth(doc.competencia, competencia) &&
+      doc.profissionalId,
   );
 
   const byProf = new Map<string, ConferenciaDocumento[]>();
@@ -190,5 +194,5 @@ function roundMoney(value: number) {
 }
 
 export function conferenciaFileName(competencia: string) {
-  return `IMPOSTOS - CONFERENCIA ${competencia.replace("/", "-")}.xlsx`;
+  return `IMPOSTOS - CONFERENCIA ${competenciaMonth(competencia).replace("/", "-")}.xlsx`;
 }

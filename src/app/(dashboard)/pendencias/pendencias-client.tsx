@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import {
   currentCompetencia,
   isPastEnvioDeadline,
+  isSameCompetenciaMonth,
   recentCompetencias,
 } from "@/lib/competencia";
 import {
@@ -63,7 +64,7 @@ export function PendenciasClient() {
             .filter(
               (documento) =>
                 documento.profissionalId === profissional.id &&
-                documento.competencia === competencia &&
+                isSameCompetenciaMonth(documento.competencia, competencia) &&
                 wasSent(documento.status),
             )
             .map((documento) => normalizeDocumentoTipo(documento.tipo)),
