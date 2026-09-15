@@ -65,7 +65,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="hidden md:flex w-60 flex-col bg-[hsl(222_47%_11%)] text-white fixed inset-y-0 left-0 z-50">
+      <aside className="hidden md:flex w-64 flex-col bg-[hsl(222_47%_11%)] text-white fixed inset-y-0 left-0 z-50">
         <div className="flex items-center gap-2 px-5 py-5 border-b border-white/10">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600">
             <FileText className="h-5 w-5" />
@@ -93,7 +93,7 @@ export function AppShell({
           <NavLink item={assistantNavItem} pathname={pathname} />
         </div>
 
-        <div className="px-3 py-4 border-t border-white/10">
+        <div className="px-3 pt-4 pb-6 border-t border-white/10">
           <div className="mb-2 flex items-center gap-2 px-3 py-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">
               {user.name.charAt(0).toUpperCase()}
@@ -106,15 +106,15 @@ export function AppShell({
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white whitespace-nowrap"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 shrink-0" />
             Sair
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 md:ml-60">
+      <div className="flex-1 md:ml-64">
         <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-white px-4 md:px-6">
           <span className="font-semibold text-sm text-slate-700 md:hidden">
             romprofcont
