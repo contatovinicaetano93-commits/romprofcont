@@ -1,0 +1,17 @@
+{
+  "name": "romprofcont",
+  "install": "npm install",
+  "terminals": [
+    {
+      "name": "next-dev",
+      "command": "npm run dev",
+      "description": "Next.js dev server on http://localhost:3000. Requires DATABASE_URL and AUTH_SECRET (set them as Cloud Agent secrets or in .env.local for local dev)."
+    }
+  ],
+  "ports": [
+    {
+      "name": "web",
+      "port": 3000
+    }
+  ]
+}
