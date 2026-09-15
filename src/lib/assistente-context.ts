@@ -1,27 +1,44 @@
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import {
   contabilidades,
   documentos,
+  emailLogs,
   obrigacoes,
   profissionais,
 } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { isSameCompetenciaMonth, uniqueCompetenciaMonths } from "@/lib/competencia";
+import {
+  competenciaForDocumento,
+  isSameCompetenciaMonth,
+  uniqueCompetenciaMonths,
+} from "@/lib/competencia";
 import { STATUS_LABELS } from "@/lib/types";
 
 export async function buildAssistenteContext() {
   const db = getDb();
 
-  const [conts, profs, obrs, docs] = await Promise.all([
+  const [conts, profs, obrs, docRows] = await Promise.all([
     db.select().from(contabilidades).orderBy(asc(contabilidades.name)),
     db.select().from(profissionais).orderBy(asc(profissionais.name)),
     db.select().from(obrigacoes),
     db
-      .select()
+      .select({
+        documento: documentos,
+        emailSentAt: emailLogs.receivedAt,
+      })
       .from(documentos)
+      .leftJoin(emailLogs, eq(documentos.emailLogId, emailLogs.id))
       .orderBy(desc(documentos.createdAt))
       .limit(40),
   ]);
+
+  const docs = docRows.map((row) => ({
+    ...row.documento,
+    competencia: competenciaForDocumento({
+      competencia: row.documento.competencia,
+      emailSentAt: row.emailSentAt,
+    }),
+  }));
 
   const competencias = uniqueCompetenciaMonths(docs.map((d) => d.competencia)).slice(0, 6);
 

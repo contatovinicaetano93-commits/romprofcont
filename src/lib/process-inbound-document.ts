@@ -86,7 +86,9 @@ export async function processInboundDocument(options: ProcessOptions) {
     })),
   );
 
-  const competencia = competenciaFromDate(options.sentAt ?? new Date());
+  const competencia = options.sentAt
+    ? competenciaFromDate(options.sentAt)
+    : result.competencia || typed.competencia || competenciaFromDate();
 
   const tipo = tipoFromKind(kind);
 

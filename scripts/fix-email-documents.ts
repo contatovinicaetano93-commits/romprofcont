@@ -20,6 +20,7 @@ async function main() {
     .select({
       id: documentos.id,
       fileName: documentos.fileName,
+      competencia: documentos.competencia,
       emailLogId: documentos.emailLogId,
       assunto: emailLogs.assunto,
       receivedAt: emailLogs.receivedAt,
@@ -68,7 +69,9 @@ async function main() {
       })),
     );
 
-    const competencia = competenciaFromDate(row.receivedAt ?? new Date());
+    const competencia = row.receivedAt
+      ? competenciaFromDate(row.receivedAt)
+      : row.competencia;
 
     await db
       .update(documentos)
