@@ -10,6 +10,7 @@ import {
   normalizeDocumentoTipo,
 } from "@/lib/types";
 import type { DocumentoStatus } from "@/lib/types";
+import { currentCompetencia } from "@/lib/competencia";
 
 type Documento = {
   id: string;
@@ -23,37 +24,6 @@ type Documento = {
   motivo: string | null;
   fileName?: string | null;
 };
-
-function csvCell(value: string) {
-  if (/[;"\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
-}
-
-function downloadApprovedExcel(docs: Documento[]) {
-  const rows = docs.filter((d) => d.status === "aprovado");
-  const header = ["Profissional", "CNPJ", "Contabilidade", "Tipo", "Competencia", "Valor", "Arquivo"];
-  const lines = rows.map((d) =>
-    [
-      d.profissionalName ?? "",
-      d.cnpj ?? "",
-      d.contabilidadeName ?? "",
-      d.tipo ?? "",
-      d.competencia,
-      d.valor ?? "",
-      d.fileName ?? "",
-    ]
-      .map(csvCell)
-      .join(";"),
-  );
-  const csv = `\uFEFF${[header.join(";"), ...lines].join("\n")}`;
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `aprovados-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 function TipoBadge({ tipo }: { tipo: string | null }) {
   const value = normalizeDocumentoTipo(tipo);
@@ -71,6 +41,8 @@ export function DocumentosClient() {
   const [statusFilter, setStatusFilter] = useState("fila");
   const [tipoFilter, setTipoFilter] = useState("todos");
   const [firmFilter, setFirmFilter] = useState("todas");
+  const [exportCompetencia, setExportCompetencia] = useState(currentCompetencia);
+  const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
   const [emailContent, setEmailContent] = useState("");
@@ -162,6 +134,34 @@ export function DocumentosClient() {
     }
   }
 
+  const competencias = useMemo(() => {
+    const values = new Set(docs.map((d) => d.competencia));
+    values.add(currentCompetencia());
+    return [...values].sort().reverse();
+  }, [docs]);
+
+  async function exportConferencia() {
+    setExporting(true);
+    try {
+      const res = await fetch(
+        `/api/documentos/export?competencia=${encodeURIComponent(exportCompetencia)}`,
+      );
+      if (!res.ok) {
+        setMessage("Não foi possível gerar a planilha.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `IMPOSTOS - CONFERENCIA ${exportCompetencia.replace("/", "-")}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function updateStatus(id: string, status: DocumentoStatus, motivo: string) {
     await fetch(`/api/documentos/${id}`, {
       method: "PATCH",
@@ -185,7 +185,7 @@ export function DocumentosClient() {
         <h1 className="text-2xl font-bold">Fila de aprovação</h1>
         <p className="text-slate-500">
           DAS, INSS, parcelamento e mensalidade já vinculados a CNPJ + nome.
-          Ricardo aprova ou reprova; o e-mail original permanece na caixa de entrada.
+          Ricardo aprova ou reprova. A planilha de conferência sai no modelo IMPOSTOS — CONFERÊNCIA, com os aprovados da competência.
         </p>
       </div>
 
@@ -228,14 +228,28 @@ export function DocumentosClient() {
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
+            <select
+              value={exportCompetencia}
+              onChange={(e) => setExportCompetencia(e.target.value)}
+              className="h-10 rounded-md border px-3 text-sm bg-white"
+            >
+              {competencias.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
             <button
               type="button"
-              onClick={() => downloadApprovedExcel(docs)}
-              className="h-10 px-3 rounded-md border text-sm inline-flex items-center gap-2 bg-white"
+              onClick={() => void exportConferencia()}
+              disabled={exporting}
+              className="h-10 px-3 rounded-md border text-sm inline-flex items-center gap-2 bg-white disabled:opacity-50"
             >
-              <Download className="h-4 w-4" /> Exportar aprovados
+              <Download className="h-4 w-4" />
+              {exporting ? "Gerando planilha..." : "Exportar conferência"}
             </button>
           </div>
+          {message && tab === "lista" && (
+            <p className="text-sm text-red-600">{message}</p>
+          )}
 
           {grouped.length === 0 ? (
             <div className="rounded-xl border bg-white p-10 text-center text-slate-400">

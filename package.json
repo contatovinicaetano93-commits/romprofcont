@@ -23,6 +23,7 @@
     "ai": "^6.0.256",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
     "imapflow": "^1.7.1",
     "jose": "^6.2.8",
     "lucide-react": "^1.31.0",

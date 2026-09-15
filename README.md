@@ -25,6 +25,6 @@ docs/SETUP.md          # passo a passo do clone
 
 Caixa Locaweb `impostoparceiro@romconcept.com.br` → cron Vercel `GET /api/cron/sync-email` (IMAP, a cada 10 min).
 
-O sync lê as pastas das contabilidades (não só a INBOX), classifica DAS / INSS / parcelamento / mensalidade, vincula CNPJ + nome da Base Mestre e deixa o e-mail na caixa de entrada (marcado como lido). A aprovação é do Ricardo em `/documentos`.
+O sync lê as pastas das contabilidades (não só a INBOX), classifica DAS / INSS / parcelamento / mensalidade, vincula CNPJ + nome da Base Mestre e deixa o e-mail na caixa de entrada. Respostas (Re/RES) não viram documento. A aprovação é do Ricardo em `/documentos`, que exporta a planilha IMPOSTOS — CONFERÊNCIA.
 
 Detalhes na Fase 2 do [`docs/SETUP.md`](docs/SETUP.md).

@@ -96,6 +96,15 @@ export function extractValorFromText(text: string) {
   return undefined;
 }
 
+export function extractParcelaLabel(...sources: Array<string | null | undefined>) {
+  for (const source of sources) {
+    if (!source) continue;
+    const match = source.match(/parcela[:\s_-]*(\d+)\s*[\/_-]\s*(\d+)/i);
+    if (match) return `Parcela: ${match[1]}/${match[2]}`;
+  }
+  return "";
+}
+
 export function extractCompetenciaFromText(text: string) {
   const patterns = [
     /REF[\s.]*(\d{2})[./](\d{4})/i,

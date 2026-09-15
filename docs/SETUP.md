@@ -81,9 +81,9 @@ O app **não** usa Power Automate nem `POST /api/email/inbound`. O caminho real 
 
 1. Configure `IMAP_*` e `CRON_SECRET` na Vercel (Production + Preview)
 2. O cron em `vercel.json` chama `GET /api/cron/sync-email` a cada 10 minutos
-3. O sync percorre as pastas das contabilidades (`INBOX.Yamada`, `INBOX.Contbell`, …), ignora enviadas/lixo/rascunho/`Resolvido` e processa e-mails **não lidos** ainda não registrados em `email_logs`
-4. Cada anexo operacional vira documento(s) em `/documentos` (DAS, INSS, parcelamento, mensalidade, DARF), com CNPJ + nome da Base Mestre
-5. Após processar, a mensagem é marcada como lida e **permanece na pasta original** (não vai para Resolvido)
+3. O sync percorre as pastas das contabilidades (`INBOX.Yamada`, `INBOX.Contbell`, …), ignora enviadas/lixo/rascunho/`Resolvido` e e-mails já registrados em `email_logs`
+4. Cada anexo operacional vira documento(s) em `/documentos` (DAS, INSS, parcelamento, mensalidade, DARF), com CNPJ + nome da Base Mestre. Respostas (`Re:` / `RES:` / `In-Reply-To`) e e-mails da própria caixa **não** viram documento
+5. Após processar, a mensagem permanece na pasta original. Em `/documentos`, o Ricardo exporta a planilha **IMPOSTOS — CONFERÊNCIA** (uma linha por profissional da Base Mestre, só valores aprovados da competência)
 
 Teste local:
 

@@ -99,9 +99,11 @@ export async function buildAssistenteContext() {
     compliance,
     regrasValidacao: [
       "O cron lê o e-mail de impostoparceiro e deixa a mensagem na caixa de entrada (não move para Resolvido).",
+      "Respostas (Re/RES, In-Reply-To) e e-mails enviados pela própria caixa não viram documento.",
       "Classifica DAS, INSS, parcelamento (inclui dívida ativa) e mensalidade da contabilidade; ignora NFS-e e extrato.",
       "Vincula CNPJ + nome da Base Mestre. Sem match fica nao_identificado.",
       "Nenhum documento é aprovado automaticamente — só o Ricardo aprova ou reprova em /documentos.",
+      "A planilha IMPOSTOS — CONFERÊNCIA exporta os aprovados da competência no modelo de consolidação (uma linha por profissional).",
       "Status possíveis: aprovado (humano), pendente_validacao, reprovado (humano), nao_identificado, arquivado.",
     ],
   };

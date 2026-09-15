@@ -5,7 +5,7 @@ import {
   isDocumentoOperacional,
   tipoFromKind,
 } from "@/lib/classify-inbound-document";
-import { extractFromContent, pickMatchingCnpj } from "@/lib/extract-document-fields";
+import { extractFromContent, extractParcelaLabel, pickMatchingCnpj } from "@/lib/extract-document-fields";
 import { validateDocument } from "@/lib/validate-document";
 
 type ProcessOptions = {
@@ -118,6 +118,7 @@ export async function processInboundDocument(options: ProcessOptions) {
         fileName: fileName ?? null,
         folder: folder ?? null,
         kind,
+        parcela: tipo === "Parcelamento" ? extractParcelaLabel(fileName, text, hint) || null : null,
       },
     })
     .returning({ id: documentos.id });

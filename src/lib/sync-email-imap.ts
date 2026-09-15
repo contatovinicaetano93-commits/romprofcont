@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { contabilidades, emailLogs } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { processInboundParts } from "@/lib/process-inbound-document";
+import { skipInboundReason } from "@/lib/email-reply";
 import {
   displayNameFromFolder,
   fallbackMessageId,
@@ -284,6 +285,40 @@ async function markSeen(session: ImapSession, uid: number) {
   );
 }
 
+function formatEnvelopeFrom(envelope: { from?: Array<{ name?: string; address?: string }> } | undefined) {
+  return (envelope?.from ?? [])
+    .map((entry) => `${entry.name ?? ""} <${entry.address ?? ""}>`.trim())
+    .join(", ");
+}
+
+async function recordSkippedReply(input: {
+  messageId: string;
+  remetente: string;
+  assunto: string;
+  folder: string;
+  uid: number;
+  reason: string;
+  receivedAt?: Date;
+}) {
+  await getDb()
+    .insert(emailLogs)
+    .values({
+      messageId: input.messageId,
+      remetente: input.remetente,
+      assunto: input.assunto,
+      corpo: "",
+      status: "processed",
+      documentosCriados: 0,
+      receivedAt: input.receivedAt ?? new Date(),
+      processedAt: new Date(),
+      rawPayload: {
+        folder: input.folder,
+        uid: input.uid,
+        skipReason: input.reason,
+      },
+    });
+}
+
 export async function syncEmailInbox(): Promise<SyncEmailResult> {
   const result = emptyResult();
   const maxPerRun = maxMessagesPerRun();
@@ -338,6 +373,27 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
             continue;
           }
 
+          const mailboxUser = process.env.IMAP_USER ?? "";
+          const envelopeSkip = skipInboundReason({
+            subject: preview.envelope?.subject,
+            inReplyTo: preview.envelope?.inReplyTo,
+            from: formatEnvelopeFrom(preview.envelope),
+            mailboxUser,
+          });
+          if (envelopeSkip) {
+            await recordSkippedReply({
+              messageId,
+              remetente: formatEnvelopeFrom(preview.envelope) || "desconhecido",
+              assunto: preview.envelope?.subject ?? "",
+              folder: folder.path,
+              uid,
+              reason: envelopeSkip,
+            });
+            result.skipped += 1;
+            await markSeen(session, uid);
+            continue;
+          }
+
           const message = await session.run("fetch-source", (client) =>
             client.fetchOne(
               uid,
@@ -364,6 +420,26 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
             message.envelope?.from?.[0]?.address ??
             "desconhecido";
           const assunto = parsed.subject ?? "";
+          const parsedSkip = skipInboundReason({
+            subject: assunto,
+            inReplyTo: parsed.inReplyTo,
+            from: remetente,
+            mailboxUser,
+          });
+          if (parsedSkip) {
+            await recordSkippedReply({
+              messageId,
+              remetente,
+              assunto,
+              folder: folder.path,
+              uid,
+              reason: parsedSkip,
+              receivedAt: parsed.date ?? undefined,
+            });
+            result.skipped += 1;
+            await markSeen(session, uid);
+            continue;
+          }
           const corpo =
             (typeof parsed.text === "string" ? parsed.text : "") ||
             (typeof parsed.html === "string" ? parsed.html : "") ||
