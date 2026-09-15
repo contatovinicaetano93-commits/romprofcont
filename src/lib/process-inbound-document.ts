@@ -2,7 +2,7 @@ import { documentos, obrigacoes, profissionais } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import {
   classifyInboundDocument,
-  isGuiaImposto,
+  isDocumentoOperacional,
   tipoFromKind,
 } from "@/lib/classify-inbound-document";
 import { extractFromContent, pickMatchingCnpj } from "@/lib/extract-document-fields";
@@ -47,7 +47,7 @@ function guessAttachmentName(fileName: string) {
 export async function processInboundDocument(options: ProcessOptions) {
   const { text, fileName, hint = "", emailLogId, folder, origem = "email" } = options;
   const kind = classifyInboundDocument(fileName, text);
-  if (!isGuiaImposto(kind)) return null;
+  if (!isDocumentoOperacional(kind)) return null;
 
   if (!text.trim() && !fileName) return null;
 

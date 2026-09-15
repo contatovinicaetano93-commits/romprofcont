@@ -5,7 +5,27 @@ export type DocumentoStatus =
   | "nao_identificado"
   | "arquivado";
 
-export type ObrigacaoTipo = "DAS" | "DARF" | "Mensalidade PJ" | "Outros";
+export type ObrigacaoTipo =
+  | "DAS"
+  | "DARF"
+  | "INSS"
+  | "Parcelamento"
+  | "Mensalidade"
+  | "Outros";
+
+export const DOCUMENTO_TIPOS_OPERACIONAIS: ObrigacaoTipo[] = [
+  "DAS",
+  "INSS",
+  "Parcelamento",
+  "Mensalidade",
+  "DARF",
+];
+
+export const TIPOS_MENSAIS_ESPERADOS: ObrigacaoTipo[] = [
+  "DAS",
+  "INSS",
+  "Mensalidade",
+];
 
 export type Periodicidade = "Mensal" | "Trimestral" | "Anual";
 
@@ -31,14 +51,41 @@ export const STATUS_COLORS: Record<DocumentoStatus, string> = {
   arquivado: "bg-blue-100 text-blue-800",
 };
 
+export const TIPO_COLORS: Record<ObrigacaoTipo, string> = {
+  DAS: "bg-sky-100 text-sky-800",
+  INSS: "bg-violet-100 text-violet-800",
+  Parcelamento: "bg-orange-100 text-orange-800",
+  Mensalidade: "bg-teal-100 text-teal-800",
+  DARF: "bg-indigo-100 text-indigo-800",
+  Outros: "bg-slate-100 text-slate-700",
+};
+
 export const UNIDADES = ["ROM Brasil", "ROM Iguatemi"] as const;
 export const REGIMES = ["Simples Nacional", "MEI", "Lucro Presumido"] as const;
 export const OBRIGACAO_TIPOS: ObrigacaoTipo[] = [
   "DAS",
+  "INSS",
+  "Parcelamento",
+  "Mensalidade",
   "DARF",
-  "Mensalidade PJ",
   "Outros",
 ];
+
+export function normalizeDocumentoTipo(tipo: string | null | undefined): ObrigacaoTipo {
+  switch (tipo) {
+    case "DAS":
+    case "DARF":
+    case "INSS":
+    case "Parcelamento":
+    case "Mensalidade":
+    case "Outros":
+      return tipo;
+    case "Mensalidade PJ":
+      return "Mensalidade";
+    default:
+      return "Outros";
+  }
+}
 
 export function formatCurrency(value: number | string | null | undefined) {
   const n = typeof value === "string" ? parseFloat(value) : Number(value ?? 0);

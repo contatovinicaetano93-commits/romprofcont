@@ -20,6 +20,7 @@ export type SyncEmailResult = {
   skipped: number;
   errors: number;
   documentsCreated: number;
+  /** Always 0 — processed mail stays in the original folder. Kept for cron JSON compatibility. */
   moved: number;
   foldersScanned: string[];
   firmsCreated: string[];
@@ -27,10 +28,6 @@ export type SyncEmailResult = {
 
 const DEFAULT_MAX_PER_RUN = 20;
 const RETRY_ATTEMPTS = 3;
-
-function resolvedMailboxPath() {
-  return process.env.IMAP_RESOLVED_MAILBOX ?? "INBOX.Resolvido";
-}
 
 function maxMessagesPerRun() {
   const raw = Number(process.env.IMAP_MAX_PER_RUN ?? DEFAULT_MAX_PER_RUN);
@@ -278,21 +275,18 @@ function emptyResult(): SyncEmailResult {
 }
 
 function slotsUsed(result: SyncEmailResult) {
-  return result.processed + result.skipped + result.errors;
+  return result.processed + result.errors;
 }
 
-async function moveToResolved(session: ImapSession, uid: number, destination: string) {
-  if (!session.lockedPath || session.lockedPath === destination) return false;
-  const moved = await session.run("move", (client) =>
-    client.messageMove(uid, destination, { uid: true }),
+async function markSeen(session: ImapSession, uid: number) {
+  await session.run("mark-seen", (client) =>
+    client.messageFlagsAdd(uid, ["\\Seen"], { uid: true }),
   );
-  return Boolean(moved);
 }
 
 export async function syncEmailInbox(): Promise<SyncEmailResult> {
   const result = emptyResult();
   const maxPerRun = maxMessagesPerRun();
-  const resolvedPath = resolvedMailboxPath();
   const session = new ImapSession();
   const firms = await loadFirms();
 
@@ -300,12 +294,6 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
     await session.ensure();
 
     const listed = await session.run("list", (client) => client.list());
-    if (!listed.some((mailbox) => mailbox.path === resolvedPath)) {
-      await session.run("create-resolvido", (client) =>
-        client.mailboxCreate(resolvedPath),
-      );
-    }
-
     const folders = workMailboxes(listed);
 
     for (const folder of folders) {
@@ -321,7 +309,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
       await session.lockMailbox(folder.path);
 
       const uids = await session.run("search", (client) =>
-        client.search({ all: true }, { uid: true }),
+        client.search({ seen: false }, { uid: true }),
       );
       if (!Array.isArray(uids) || uids.length === 0) {
         session.dropLock();
@@ -346,9 +334,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
           let existing = await findEmailLog(messageId);
           if (existing) {
             result.skipped += 1;
-            if (await moveToResolved(session, uid, resolvedPath)) {
-              result.moved += 1;
-            }
+            await markSeen(session, uid);
             continue;
           }
 
@@ -369,9 +355,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
           existing = await findEmailLog(messageId);
           if (existing) {
             result.skipped += 1;
-            if (await moveToResolved(session, uid, resolvedPath)) {
-              result.moved += 1;
-            }
+            await markSeen(session, uid);
             continue;
           }
 
@@ -427,9 +411,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
 
             result.processed += 1;
             result.documentsCreated += created;
-            if (await moveToResolved(session, uid, resolvedPath)) {
-              result.moved += 1;
-            }
+            await markSeen(session, uid);
           } catch (error) {
             await getDb()
               .update(emailLogs)

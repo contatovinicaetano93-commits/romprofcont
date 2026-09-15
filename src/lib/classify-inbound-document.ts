@@ -1,11 +1,14 @@
+import type { ObrigacaoTipo } from "@/lib/types";
+
 export type InboundKind =
   | "guia_das"
   | "guia_darf"
+  | "guia_inss"
+  | "guia_parcelamento"
+  | "mensalidade"
   | "extrato"
   | "relatorio"
   | "nfse"
-  | "honorarios"
-  | "boleto_servico"
   | "corpo_email"
   | "ignorado";
 
@@ -14,6 +17,11 @@ function normalize(value: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function hasWord(blob: string, word: string) {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(blob);
 }
 
 export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
@@ -33,14 +41,6 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     return "nfse";
   }
 
-  if (name.includes("honorario") || blob.includes("honorario")) {
-    return "honorarios";
-  }
-
-  if (name.includes("servicos_vencto") || name.includes("servicos-vencto")) {
-    return "boleto_servico";
-  }
-
   if (name.includes("extrato") || blob.includes("pgdasd-extrato")) {
     return "extrato";
   }
@@ -50,6 +50,17 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     (name.includes("relatorio") && name.includes("imposto"))
   ) {
     return "relatorio";
+  }
+
+  const looksLikeParcelamento =
+    blob.includes("parcelamento") ||
+    blob.includes("divida ativa") ||
+    blob.includes("dividaativa") ||
+    hasWord(blob, "pgfn") ||
+    name.includes("parcelamento");
+
+  if (looksLikeParcelamento) {
+    return "guia_parcelamento";
   }
 
   const looksLikeDarf =
@@ -62,6 +73,17 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     /(^|[^a-z])das([^a-z]|$)/.test(name) ||
     blob.includes("documento de arrecadacao do simples nacional");
 
+  const looksLikeInss =
+    hasWord(blob, "inss") ||
+    hasWord(blob, "gps") ||
+    blob.includes("guia da previdencia") ||
+    blob.includes("guia de inss") ||
+    blob.includes("contribuicao previdenciaria") ||
+    blob.includes("documento de arrecadacao do inss");
+
+  if (looksLikeInss && !looksLikeDas) {
+    return "guia_inss";
+  }
   if (looksLikeDarf && !looksLikeDas) {
     return "guia_darf";
   }
@@ -69,23 +91,32 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     return "guia_das";
   }
 
-  if (name.includes("_bol_") || name.includes("boleto")) {
-    return "boleto_servico";
+  const looksLikeMensalidade =
+    name.includes("honorario") ||
+    blob.includes("honorario") ||
+    blob.includes("mensalidade") ||
+    name.includes("mensalidade") ||
+    name.includes("servicos_vencto") ||
+    name.includes("servicos-vencto");
+
+  if (looksLikeMensalidade) {
+    return "mensalidade";
   }
 
   return "ignorado";
 }
 
-export function isGuiaImposto(kind: InboundKind): boolean {
+export function isDocumentoOperacional(kind: InboundKind): boolean {
   switch (kind) {
     case "guia_das":
     case "guia_darf":
+    case "guia_inss":
+    case "guia_parcelamento":
+    case "mensalidade":
       return true;
     case "extrato":
     case "relatorio":
     case "nfse":
-    case "honorarios":
-    case "boleto_servico":
     case "corpo_email":
     case "ignorado":
       return false;
@@ -96,17 +127,21 @@ export function isGuiaImposto(kind: InboundKind): boolean {
   }
 }
 
-export function tipoFromKind(kind: InboundKind): "DAS" | "DARF" | "Outros" {
+export function tipoFromKind(kind: InboundKind): ObrigacaoTipo {
   switch (kind) {
     case "guia_das":
       return "DAS";
     case "guia_darf":
       return "DARF";
+    case "guia_inss":
+      return "INSS";
+    case "guia_parcelamento":
+      return "Parcelamento";
+    case "mensalidade":
+      return "Mensalidade";
     case "extrato":
     case "relatorio":
     case "nfse":
-    case "honorarios":
-    case "boleto_servico":
     case "corpo_email":
     case "ignorado":
       return "Outros";

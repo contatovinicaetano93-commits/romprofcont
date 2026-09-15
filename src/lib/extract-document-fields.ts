@@ -120,13 +120,19 @@ export function extractCompetenciaFromText(text: string) {
 
 export function guessTipoFromText(text: string): string {
   const upper = text.toUpperCase();
+  if (upper.includes("PARCELAMENTO") || upper.includes("DIVIDA ATIVA") || upper.includes("DÍVIDA ATIVA")) {
+    return "Parcelamento";
+  }
   if (upper.includes(" DAS ") || upper.includes("-DAS") || upper.startsWith("DAS")) {
     return "DAS";
+  }
+  if (upper.includes("INSS") || upper.includes(" GPS ") || upper.startsWith("GPS")) {
+    return "INSS";
   }
   if (upper.includes(" DARF ") || upper.includes("-DARF") || upper.startsWith("DARF")) {
     return "DARF";
   }
-  if (upper.includes("MENSALIDADE")) return "Mensalidade PJ";
+  if (upper.includes("MENSALIDADE") || upper.includes("HONORARIO")) return "Mensalidade";
   if (upper.includes("BOLETO")) return "Outros";
   return "Outros";
 }

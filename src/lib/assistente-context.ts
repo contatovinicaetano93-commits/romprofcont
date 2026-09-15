@@ -98,9 +98,10 @@ export async function buildAssistenteContext() {
     pendencias: pendencias.slice(0, 25),
     compliance,
     regrasValidacao: [
-      "O sistema organiza sozinho: extrai CNPJ/tipo/valor, liga ao profissional e à contabilidade.",
-      "Nenhum documento é aprovado automaticamente — só o analista aprova ou reprova em /documentos.",
-      "Sem CNPJ na Base Mestre o status fica nao_identificado; com match, fica pendente_validacao.",
+      "O cron lê o e-mail de impostoparceiro e deixa a mensagem na caixa de entrada (não move para Resolvido).",
+      "Classifica DAS, INSS, parcelamento (inclui dívida ativa) e mensalidade da contabilidade; ignora NFS-e e extrato.",
+      "Vincula CNPJ + nome da Base Mestre. Sem match fica nao_identificado.",
+      "Nenhum documento é aprovado automaticamente — só o Ricardo aprova ou reprova em /documentos.",
       "Status possíveis: aprovado (humano), pendente_validacao, reprovado (humano), nao_identificado, arquivado.",
     ],
   };
@@ -115,7 +116,7 @@ export const ASSISTENTE_SYSTEM_PROMPT = `Você é o Assistente Fiscal da ROM Con
 Responda sempre em português do Brasil, de forma clara, objetiva e profissional.
 
 Você ajuda a equipe a:
-- Consultar pendências de DAS/DARF e obrigações por competência
+- Consultar pendências de DAS, INSS e mensalidade por competência
 - Explicar o que o sistema já organizou (CNPJ, profissional, contabilidade, tipo)
 - Resumir o que falta o analista aprovar em /documentos
 - Orientar próximos passos (cadastrar profissional, aprovar/reprovar, cobrar contabilidade)
