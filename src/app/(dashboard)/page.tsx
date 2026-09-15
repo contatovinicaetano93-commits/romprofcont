@@ -1,52 +1,60 @@
-import { asc, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import {
   contabilidades,
   documentos,
-  obrigacoes,
   profissionais,
 } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { formatCompetenciaMonth } from "@/lib/types";
-import { DashboardClient } from "./dashboard-client";
+import { DashboardClient, type DashboardDoc, type DashboardProfissional } from "./dashboard-client";
 
 export default async function DashboardPage() {
   const db = getDb();
 
-  const [docs, obrs, profs, conts] = await Promise.all([
+  const [docs, profs, conts] = await Promise.all([
     db.select().from(documentos).orderBy(desc(documentos.createdAt)),
-    db.select().from(obrigacoes),
     db.select().from(profissionais),
-    db.select().from(contabilidades).orderBy(asc(contabilidades.name)),
+    db.select().from(contabilidades),
   ]);
 
-  const competencias = [...new Set(docs.map((d) => d.competencia))].sort().reverse();
-  const expectedMensal = obrs.filter((o) => o.periodicidade === "Mensal").length;
+  const contById = new Map(conts.map((c) => [c.id, c.name]));
+  const profById = new Map(profs.map((p) => [p.id, p]));
 
-  const compliance = conts.map((c) => {
-    const profIds = profs.filter((p) => p.contabilidadeId === c.id).map((p) => p.id);
-    const expected = obrs.filter((o) => profIds.includes(o.profissionalId)).length;
-    const received = docs.filter((d) => d.contabilidadeId === c.id).length;
-    const approved = docs.filter(
-      (d) => d.contabilidadeId === c.id && d.status === "aprovado",
-    ).length;
-    const pending = Math.max(0, expected - approved);
-    const compliancePct = expected > 0 ? Math.round((approved / expected) * 100) : 100;
-    return { id: c.id, name: c.name, expected, received, approved, pending, compliancePct };
-  });
+  const initialDocs: DashboardDoc[] = docs
+    .filter((d) => d.status !== "arquivado")
+    .map((d) => {
+      const prof = d.profissionalId ? profById.get(d.profissionalId) : undefined;
+      return {
+        id: d.id,
+        competencia: d.competencia,
+        status: d.status,
+        tipo: d.tipo,
+        cnpj: d.cnpj,
+        valor: d.valor,
+        profissionalId: d.profissionalId,
+        profissionalName: prof?.name ?? null,
+        contabilidadeId: d.contabilidadeId ?? prof?.contabilidadeId ?? null,
+        contabilidadeName:
+          (d.contabilidadeId ? contById.get(d.contabilidadeId) : undefined) ??
+          (prof ? contById.get(prof.contabilidadeId) : undefined) ??
+          null,
+      };
+    });
 
-  const chartCompetencias = competencias.slice(0, 5).reverse().map((comp) => ({
-    competencia: formatCompetenciaMonth(comp).split("/")[0],
-    esperado: expectedMensal,
-    recebido: docs.filter((d) => d.competencia === comp).length,
+  const profissionaisRows: DashboardProfissional[] = profs.map((p) => ({
+    id: p.id,
+    name: p.name,
+    cnpj: p.cnpj,
+    contabilidadeId: p.contabilidadeId,
+    contabilidadeName: contById.get(p.contabilidadeId) ?? "Sem contabilidade",
   }));
+
+  const competencias = [...new Set(initialDocs.map((d) => d.competencia))].sort().reverse();
 
   return (
     <DashboardClient
       initialCompetencias={["todas", ...competencias]}
-      initialDocs={docs}
-      expectedMensal={expectedMensal}
-      compliance={compliance}
-      chartCompetencias={chartCompetencias}
+      initialDocs={initialDocs}
+      profissionais={profissionaisRows}
     />
   );
 }

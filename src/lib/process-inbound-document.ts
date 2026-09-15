@@ -2,10 +2,10 @@ import { documentos, obrigacoes, profissionais } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import {
   classifyInboundDocument,
-  isGuiaImposto,
+  isDocumentoOperacional,
   tipoFromKind,
 } from "@/lib/classify-inbound-document";
-import { extractFromContent, pickMatchingCnpj } from "@/lib/extract-document-fields";
+import { extractFromContent, extractParcelaLabel, pickMatchingCnpj } from "@/lib/extract-document-fields";
 import { validateDocument } from "@/lib/validate-document";
 
 type ProcessOptions = {
@@ -47,7 +47,7 @@ function guessAttachmentName(fileName: string) {
 export async function processInboundDocument(options: ProcessOptions) {
   const { text, fileName, hint = "", emailLogId, folder, origem = "email" } = options;
   const kind = classifyInboundDocument(fileName, text);
-  if (!isGuiaImposto(kind)) return null;
+  if (!isDocumentoOperacional(kind)) return null;
 
   if (!text.trim() && !fileName) return null;
 
@@ -118,6 +118,7 @@ export async function processInboundDocument(options: ProcessOptions) {
         fileName: fileName ?? null,
         folder: folder ?? null,
         kind,
+        parcela: tipo === "Parcelamento" ? extractParcelaLabel(fileName, text, hint) || null : null,
       },
     })
     .returning({ id: documentos.id });

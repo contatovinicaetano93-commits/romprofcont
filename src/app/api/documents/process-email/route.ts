@@ -5,7 +5,7 @@ export async function POST(_request: Request) {
   return Response.json(
     {
       error:
-        "A guia precisa ser um PDF DAS/DARF. Use a aba Upload em Lote — colar o e-mail não identifica a guia.",
+        "O PDF precisa ser DAS, INSS, parcelamento ou mensalidade. Use a aba Upload em lote — colar o e-mail não identifica o documento.",
     },
     { status: 400 },
   );

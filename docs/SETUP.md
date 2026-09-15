@@ -70,7 +70,6 @@ Copie `.env.example` → `.env.local` e preencha:
 | `IMAP_USER` | `impostoparceiro@romconcept.com.br` |
 | `IMAP_PASSWORD` | senha da caixa Locaweb |
 | `IMAP_MAX_PER_RUN` | teto por execução (padrão 20; o cron tem 60s) |
-| `IMAP_RESOLVED_MAILBOX` | pasta destino após processar (padrão `INBOX.Resolvido`) |
 
 ---
 
@@ -82,9 +81,9 @@ O app **não** usa Power Automate nem `POST /api/email/inbound`. O caminho real 
 
 1. Configure `IMAP_*` e `CRON_SECRET` na Vercel (Production + Preview)
 2. O cron em `vercel.json` chama `GET /api/cron/sync-email` a cada 10 minutos
-3. O sync percorre as pastas das contabilidades (`INBOX.Yamada`, `INBOX.Contbell`, …), ignora enviadas/lixo/rascunho/`Resolvido` e processa e-mails ainda não registrados em `email_logs` (lidos ou não)
-4. Cada e-mail vira documento(s) em `/documentos`, com a contabilidade da pasta quando o CNPJ não casa na Base Mestre
-5. Após sucesso (ou se o `message-id` já estava no banco), a mensagem vai para `INBOX.Resolvido`
+3. O sync percorre as pastas das contabilidades (`INBOX.Yamada`, `INBOX.Contbell`, …), ignora enviadas/lixo/rascunho/`Resolvido` e e-mails já registrados em `email_logs`
+4. Cada anexo operacional vira documento(s) em `/documentos` (DAS, INSS, parcelamento, mensalidade, DARF), com CNPJ + nome da Base Mestre. Respostas (`Re:` / `RES:` / `In-Reply-To`) e e-mails da própria caixa **não** viram documento
+5. Após processar, a mensagem permanece na pasta original. Em `/documentos`, o Ricardo exporta a planilha **IMPOSTOS — CONFERÊNCIA** (uma linha por profissional da Base Mestre, só valores aprovados da competência)
 
 Teste local:
 
@@ -119,7 +118,7 @@ Marque conforme for concluindo:
 - [x] **4.7** Organização automática (CNPJ/escritório); aprovação só humana
 - [ ] **4.8** Dashboard com KPIs e gráficos
 - [ ] **4.9** Pendências (obrigações não recebidas)
-- [x] **4.10** Sync IMAP (`/api/cron/sync-email`) — pastas das contabilidades + Resolvido
+- [x] **4.10** Sync IMAP (`/api/cron/sync-email`) — pastas das contabilidades, e-mail permanece na caixa
 - [ ] **4.11** Parser XML NF-e + extração PDF
 - [ ] **4.12** Assistente IA (opcional, fase 2)
 - [ ] **4.13** Conferir cron Vercel + IMAP em produção (pastas → `/documentos`)
@@ -129,7 +128,7 @@ Marque conforme for concluindo:
 ## Fase 5 — Teste end-to-end
 
 1. Cadastre 1 contabilidade + 1 profissional + 1 obrigação mensal na Base Mestre
-2. Coloque um e-mail de teste (DAS/DARF) na pasta da contabilidade em `impostoparceiro@romconcept.com.br`
+2. Coloque um e-mail de teste (DAS, INSS, parcelamento ou mensalidade) na pasta da contabilidade em `impostoparceiro@romconcept.com.br`
 3. Confirme documento criado em `/documentos` como pendente de aprovação (não aprovado sozinho)
 4. Verifique dashboard atualizado
 

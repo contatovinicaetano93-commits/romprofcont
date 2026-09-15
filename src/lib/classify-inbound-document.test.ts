@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   classifyInboundDocument,
-  isGuiaImposto,
+  isDocumentoOperacional,
   tipoFromKind,
 } from "./classify-inbound-document";
 
@@ -16,23 +16,64 @@ describe("classifyInboundDocument", () => {
       classifyInboundDocument("imposto.pdf", "Documento de Arrecadação do Simples Nacional"),
       "guia_das",
     );
-    assert.equal(isGuiaImposto("guia_das"), true);
+    assert.equal(
+      classifyInboundDocument(
+        "PGDASD-DAS- 06_2026.pdf",
+        "Simples Nacional com menção a parcelamento e Dívida Ativa PGFN",
+      ),
+      "guia_das",
+    );
+    assert.equal(isDocumentoOperacional("guia_das"), true);
     assert.equal(tipoFromKind("guia_das"), "DAS");
   });
 
-  it("drops NFS-e, honorarios, service slips, extracts and email bodies", () => {
-    assert.equal(classifyInboundDocument("NFSe19361_01530207000130.pdf"), "nfse");
-    assert.equal(classifyInboundDocument("19361_20260727.xml"), "nfse");
+  it("keeps INSS, parcelamento (including dívida ativa) and accounting fees", () => {
+    assert.equal(classifyInboundDocument("guia-inss-agosto.pdf"), "guia_inss");
+    assert.equal(
+      classifyInboundDocument("gps.pdf", "Guia da Previdência Social INSS"),
+      "guia_inss",
+    );
+    assert.equal(tipoFromKind("guia_inss"), "INSS");
+
+    assert.equal(
+      classifyInboundDocument("parcelamento-julho.pdf"),
+      "guia_parcelamento",
+    );
+    assert.equal(
+      classifyInboundDocument("guia.pdf", "Parcelamento de Dívida Ativa PGFN"),
+      "guia_parcelamento",
+    );
+    assert.equal(tipoFromKind("guia_parcelamento"), "Parcelamento");
+
     assert.equal(
       classifyInboundDocument("recibo_de_honorarios_contabeis_0000003851.pdf"),
-      "honorarios",
+      "mensalidade",
     );
     assert.equal(
       classifyInboundDocument(
         "servicos_vencto_10_08_2026_doc_19361_bol__cli_47365477000134_001.pdf",
       ),
-      "boleto_servico",
+      "mensalidade",
     );
+    assert.equal(
+      classifyInboundDocument("boleto-mensalidade-agosto.pdf"),
+      "mensalidade",
+    );
+    assert.equal(
+      classifyInboundDocument(
+        "recibo_de_honorarios_contabeis_0000003851.pdf",
+        "Boleto com linha de INSS / GPS",
+      ),
+      "mensalidade",
+    );
+    assert.equal(tipoFromKind("mensalidade"), "Mensalidade");
+    assert.equal(isDocumentoOperacional("mensalidade"), true);
+    assert.equal(isDocumentoOperacional("guia_parcelamento"), true);
+  });
+
+  it("drops NFS-e, extracts, reports and email bodies", () => {
+    assert.equal(classifyInboundDocument("NFSe19361_01530207000130.pdf"), "nfse");
+    assert.equal(classifyInboundDocument("19361_20260727.xml"), "nfse");
     assert.equal(classifyInboundDocument("PGDASD-EXTRATO- 06_2026.pdf"), "extrato");
     assert.equal(
       classifyInboundDocument(
@@ -41,8 +82,8 @@ describe("classifyInboundDocument", () => {
       "relatorio",
     );
     assert.equal(classifyInboundDocument("corpo-email.txt", "assunto DAS"), "corpo_email");
-    assert.equal(isGuiaImposto("nfse"), false);
-    assert.equal(isGuiaImposto("boleto_servico"), false);
-    assert.equal(isGuiaImposto("extrato"), false);
+    assert.equal(isDocumentoOperacional("nfse"), false);
+    assert.equal(isDocumentoOperacional("extrato"), false);
+    assert.equal(classifyInboundDocument("comprovante-aleatorio.pdf"), "ignorado");
   });
 });
