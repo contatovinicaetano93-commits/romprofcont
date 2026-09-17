@@ -1,3 +1,4 @@
+import { and, eq, inArray } from "drizzle-orm";
 import { documentos, obrigacoes, profissionais } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import {
@@ -6,6 +7,12 @@ import {
   tipoFromKind,
 } from "@/lib/classify-inbound-document";
 import { competenciaFromDate } from "@/lib/competencia";
+import {
+  extraDuplicateIds,
+  findMatchingLiveDuplicate,
+  LIVE_DUPLICATE_STATUSES,
+  DUPLICATE_MOTIVO,
+} from "@/lib/document-dedupe";
 import { extractFromContent, extractParcelaLabel, pickMatchingCnpj } from "@/lib/extract-document-fields";
 import { validateDocument } from "@/lib/validate-document";
 
@@ -45,6 +52,59 @@ function hasMinimalData(extracted: ReturnType<typeof extractFromContent>, fileNa
 
 function guessAttachmentName(fileName: string) {
   return /\.(pdf|xml)$/i.test(fileName);
+}
+
+async function loadLiveDuplicatesByFileName(fileName: string) {
+  return getDb()
+    .select({
+      id: documentos.id,
+      status: documentos.status,
+      createdAt: documentos.createdAt,
+      fileName: documentos.fileName,
+      valor: documentos.valor,
+      profissionalId: documentos.profissionalId,
+      cnpj: documentos.cnpj,
+      tipo: documentos.tipo,
+    })
+    .from(documentos)
+    .where(
+      and(
+        eq(documentos.fileName, fileName),
+        inArray(documentos.status, [...LIVE_DUPLICATE_STATUSES]),
+      ),
+    );
+}
+
+export async function archiveLiveDuplicateDocuments() {
+  const rows = await getDb()
+    .select({
+      id: documentos.id,
+      status: documentos.status,
+      createdAt: documentos.createdAt,
+      fileName: documentos.fileName,
+      valor: documentos.valor,
+      profissionalId: documentos.profissionalId,
+      cnpj: documentos.cnpj,
+      tipo: documentos.tipo,
+    })
+    .from(documentos)
+    .where(inArray(documentos.status, [...LIVE_DUPLICATE_STATUSES]));
+
+  const extraIds = extraDuplicateIds(rows);
+  if (extraIds.length === 0) {
+    return { archived: 0, ids: [] as string[] };
+  }
+
+  await getDb()
+    .update(documentos)
+    .set({
+      status: "arquivado",
+      motivo: DUPLICATE_MOTIVO,
+      updatedAt: new Date(),
+    })
+    .where(inArray(documentos.id, extraIds));
+
+  return { archived: extraIds.length, ids: extraIds };
 }
 
 export async function processInboundDocument(options: ProcessOptions) {
@@ -96,6 +156,24 @@ export async function processInboundDocument(options: ProcessOptions) {
     ? result.contabilidadeId
     : (result.contabilidadeId ?? options.contabilidadeId ?? null);
 
+  const valor = (result.valor || typed.valor) ? String(result.valor || typed.valor) : null;
+  const cnpjFinal = result.cnpj || typed.cnpj || null;
+
+  if (fileName) {
+    const live = await loadLiveDuplicatesByFileName(fileName);
+    const duplicate = findMatchingLiveDuplicate(
+      {
+        fileName,
+        valor,
+        profissionalId: result.profissionalId,
+        cnpj: cnpjFinal,
+        tipo,
+      },
+      live,
+    );
+    if (duplicate) return null;
+  }
+
   const [row] = await getDb()
     .insert(documentos)
     .values({
@@ -104,11 +182,11 @@ export async function processInboundDocument(options: ProcessOptions) {
       obrigacaoId: result.obrigacaoId,
       competencia,
       status: result.status,
-      cnpj: result.cnpj || typed.cnpj || null,
+      cnpj: cnpjFinal,
       tipo,
       tipoArquivo: fileName?.split(".").pop()?.toLowerCase() ?? null,
       fileName: fileName ?? null,
-      valor: (result.valor || typed.valor) ? String(result.valor || typed.valor) : null,
+      valor,
       motivo: result.motivo,
       acaoNecessaria: result.acaoNecessaria,
       unidade: result.unidade,
