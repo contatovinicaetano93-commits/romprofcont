@@ -8,18 +8,20 @@ import {
 } from "./document-dedupe";
 
 describe("documentDedupeKey", () => {
-  it("treats the same file, amount and professional as one document", () => {
+  it("treats the same file, amount, professional and month as one document", () => {
     const a = documentDedupeKey({
       fileName: "ENC: GuiaPagamento.pdf",
       valor: "37.10",
       profissionalId: "prof-1",
       tipo: "INSS",
+      competencia: "15/09/2026",
     });
     const b = documentDedupeKey({
       fileName: "enc:  guiapagamento.pdf",
       valor: 37.1,
       profissionalId: "prof-1",
       tipo: "INSS",
+      competencia: "09/2026",
     });
     assert.equal(a, b);
     assert.ok(a);
@@ -31,23 +33,46 @@ describe("documentDedupeKey", () => {
       valor: "210.00",
       profissionalId: "prof-maria",
       tipo: "DAS",
+      competencia: "03/2026",
     });
     const april = documentDedupeKey({
       fileName: "DAS MARIA ROSEANE.pdf",
       valor: "215.50",
       profissionalId: "prof-maria",
       tipo: "DAS",
+      competencia: "03/2026",
     });
     assert.notEqual(march, april);
   });
 
-  it("does not key a document without filename or amount", () => {
+  it("keeps a later month that reuses the filename and amount", () => {
+    const march = documentDedupeKey({
+      fileName: "GuiaPagamento.pdf",
+      valor: "412.33",
+      profissionalId: "prof-inss",
+      tipo: "INSS",
+      competencia: "15/03/2026",
+    });
+    const april = documentDedupeKey({
+      fileName: "GuiaPagamento.pdf",
+      valor: "412.33",
+      profissionalId: "prof-inss",
+      tipo: "INSS",
+      competencia: "04/2026",
+    });
+    assert.ok(march);
+    assert.ok(april);
+    assert.notEqual(march, april);
+  });
+
+  it("does not key a document without filename, amount, month or identity", () => {
     assert.equal(
       documentDedupeKey({
         fileName: "",
         valor: "60.00",
         profissionalId: "prof-1",
         tipo: "DAS",
+        competencia: "09/2026",
       }),
       null,
     );
@@ -57,6 +82,25 @@ describe("documentDedupeKey", () => {
         valor: null,
         profissionalId: "prof-1",
         tipo: "DAS",
+        competencia: "09/2026",
+      }),
+      null,
+    );
+    assert.equal(
+      documentDedupeKey({
+        fileName: "GuiaPagamento.pdf",
+        valor: "37.10",
+        profissionalId: "prof-1",
+        tipo: "INSS",
+      }),
+      null,
+    );
+    assert.equal(
+      documentDedupeKey({
+        fileName: "GuiaPagamento.pdf",
+        valor: "37.10",
+        tipo: "INSS",
+        competencia: "09/2026",
       }),
       null,
     );
@@ -74,6 +118,7 @@ describe("extraDuplicateIds", () => {
         valor: "60.00",
         profissionalId: "luci",
         tipo: "DAS",
+        competencia: "08/2026",
       },
       {
         id: "approved",
@@ -83,6 +128,7 @@ describe("extraDuplicateIds", () => {
         valor: "60.00",
         profissionalId: "luci",
         tipo: "DAS",
+        competencia: "08/2026",
       },
     ]);
     assert.deepEqual(extras, ["old"]);
@@ -98,6 +144,7 @@ describe("extraDuplicateIds", () => {
         valor: "86.05",
         profissionalId: "andressa",
         tipo: "DAS",
+        competencia: "09/2026",
       },
       {
         id: "first",
@@ -107,6 +154,7 @@ describe("extraDuplicateIds", () => {
         valor: "86.05",
         profissionalId: "andressa",
         tipo: "DAS",
+        competencia: "09/2026",
       },
       {
         id: "third",
@@ -116,6 +164,7 @@ describe("extraDuplicateIds", () => {
         valor: "86.05",
         profissionalId: "andressa",
         tipo: "DAS",
+        competencia: "09/2026",
       },
       {
         id: "second",
@@ -125,6 +174,7 @@ describe("extraDuplicateIds", () => {
         valor: "86.05",
         profissionalId: "andressa",
         tipo: "DAS",
+        competencia: "09/2026",
       },
     ]);
     assert.equal(extras.length, 3);
@@ -142,6 +192,7 @@ describe("extraDuplicateIds", () => {
         valor: "100.00",
         profissionalId: "maria",
         tipo: "DAS",
+        competencia: "03/2026",
       },
       {
         id: "other-month",
@@ -151,6 +202,7 @@ describe("extraDuplicateIds", () => {
         valor: "110.00",
         profissionalId: "maria",
         tipo: "DAS",
+        competencia: "04/2026",
       },
       {
         id: "already-archived",
@@ -160,6 +212,57 @@ describe("extraDuplicateIds", () => {
         valor: "100.00",
         profissionalId: "maria",
         tipo: "DAS",
+        competencia: "03/2026",
+      },
+    ]);
+    assert.deepEqual(extras, []);
+  });
+
+  it("keeps approved months that reuse a filename and amount", () => {
+    const extras = extraDuplicateIds([
+      {
+        id: "march-approved",
+        status: "aprovado",
+        createdAt: "2026-03-10T10:00:00.000Z",
+        fileName: "GuiaPagamento.pdf",
+        valor: "37.10",
+        profissionalId: "prof-inss",
+        tipo: "INSS",
+        competencia: "03/2026",
+      },
+      {
+        id: "april-pending",
+        status: "pendente_validacao",
+        createdAt: "2026-04-10T10:00:00.000Z",
+        fileName: "GuiaPagamento.pdf",
+        valor: "37.10",
+        profissionalId: "prof-inss",
+        tipo: "INSS",
+        competencia: "04/2026",
+      },
+    ]);
+    assert.deepEqual(extras, []);
+  });
+
+  it("does not archive unidentified docs that share a generic name without identity", () => {
+    const extras = extraDuplicateIds([
+      {
+        id: "one",
+        status: "nao_identificado",
+        createdAt: "2026-09-01T10:00:00.000Z",
+        fileName: "GuiaPagamento.pdf",
+        valor: "37.10",
+        tipo: "INSS",
+        competencia: "09/2026",
+      },
+      {
+        id: "two",
+        status: "nao_identificado",
+        createdAt: "2026-09-02T10:00:00.000Z",
+        fileName: "GuiaPagamento.pdf",
+        valor: "37.10",
+        tipo: "INSS",
+        competencia: "09/2026",
       },
     ]);
     assert.deepEqual(extras, []);
@@ -174,6 +277,7 @@ describe("findMatchingLiveDuplicate", () => {
         valor: "412.33",
         profissionalId: "prof-inss",
         tipo: "INSS",
+        competencia: "09/2026",
       },
       [
         {
@@ -184,10 +288,36 @@ describe("findMatchingLiveDuplicate", () => {
           valor: "412.33",
           profissionalId: "prof-inss",
           tipo: "INSS",
+          competencia: "15/09/2026",
         },
       ],
     );
     assert.equal(match?.id, "kept");
+  });
+
+  it("does not match a later month that reuses the filename and amount", () => {
+    const match = findMatchingLiveDuplicate(
+      {
+        fileName: "GuiaPagamento.pdf",
+        valor: "412.33",
+        profissionalId: "prof-inss",
+        tipo: "INSS",
+        competencia: "04/2026",
+      },
+      [
+        {
+          id: "march",
+          status: "aprovado",
+          createdAt: "2026-03-16T14:00:00.000Z",
+          fileName: "GuiaPagamento.pdf",
+          valor: "412.33",
+          profissionalId: "prof-inss",
+          tipo: "INSS",
+          competencia: "03/2026",
+        },
+      ],
+    );
+    assert.equal(match, undefined);
   });
 
   it("does not match a rejected document so a resend can re-enter the queue", () => {
@@ -197,6 +327,7 @@ describe("findMatchingLiveDuplicate", () => {
         valor: "80.00",
         profissionalId: "prof-1",
         tipo: "DAS",
+        competencia: "09/2026",
       },
       [
         {
@@ -207,6 +338,7 @@ describe("findMatchingLiveDuplicate", () => {
           valor: "80.00",
           profissionalId: "prof-1",
           tipo: "DAS",
+          competencia: "09/2026",
         },
       ],
     );
