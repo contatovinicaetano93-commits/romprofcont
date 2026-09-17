@@ -8,6 +8,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
 import * as schema from "../src/db/schema";
 import { documentos, emailLogs, obrigacoes, profissionais } from "../src/db/schema";
+import { competenciaFromDate } from "../src/lib/competencia";
 import { extractFromContent, isValidCnpj } from "../src/lib/extract-document-fields";
 import { validateDocument } from "../src/lib/validate-document";
 
@@ -19,8 +20,10 @@ async function main() {
     .select({
       id: documentos.id,
       fileName: documentos.fileName,
+      competencia: documentos.competencia,
       emailLogId: documentos.emailLogId,
       assunto: emailLogs.assunto,
+      receivedAt: emailLogs.receivedAt,
     })
     .from(documentos)
     .leftJoin(emailLogs, eq(documentos.emailLogId, emailLogs.id))
@@ -66,9 +69,9 @@ async function main() {
       })),
     );
 
-    const competencia =
-      extracted.competencia ||
-      `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
+    const competencia = row.receivedAt
+      ? competenciaFromDate(row.receivedAt)
+      : row.competencia;
 
     await db
       .update(documentos)

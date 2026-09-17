@@ -1,3 +1,5 @@
+import { competenciaMonth } from "@/lib/competencia";
+
 export type DocumentoStatus =
   | "aprovado"
   | "pendente_validacao"
@@ -96,7 +98,7 @@ export function formatCurrency(value: number | string | null | undefined) {
 }
 
 export function formatCompetenciaMonth(competencia: string) {
-  const [mm, yyyy] = competencia.split("/");
+  const [mm, yyyy] = competenciaMonth(competencia).split("/");
   const months = [
     "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
     "Jul", "Ago", "Set", "Out", "Nov", "Dez",

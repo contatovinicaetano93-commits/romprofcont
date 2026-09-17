@@ -69,6 +69,17 @@ describe("classifyInboundDocument", () => {
     assert.equal(tipoFromKind("mensalidade"), "Mensalidade");
     assert.equal(isDocumentoOperacional("mensalidade"), true);
     assert.equal(isDocumentoOperacional("guia_parcelamento"), true);
+
+    assert.equal(classifyInboundDocument("PARC. DAS - RAFAELE 10-56.pdf"), "guia_parcelamento");
+    assert.equal(classifyInboundDocument("Divida ativa. Marciel 39-45.pdf"), "guia_parcelamento");
+    assert.equal(
+      classifyInboundDocument("M. G. DOS SANTOS - DARF INSS - AGO26 - R$178,31.pdf"),
+      "guia_inss",
+    );
+    assert.equal(
+      classifyInboundDocument("GuiaPagamento_62284007000130_110920261637555327.pdf"),
+      "guia_inss",
+    );
   });
 
   it("drops NFS-e, extracts, reports and email bodies", () => {

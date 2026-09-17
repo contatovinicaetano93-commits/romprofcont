@@ -1,7 +1,7 @@
 import { syncEmailInbox } from "@/lib/sync-email-imap";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function authorize(request: Request) {
   const secret = process.env.CRON_SECRET;

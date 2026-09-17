@@ -102,7 +102,9 @@ async function main() {
       }
 
       const hint = `${assunto}\n${remetente}\n${corpo.slice(0, 2000)}`;
-      const created = await processInboundParts(parts, hint, log.id);
+      const created = await processInboundParts(parts, hint, log.id, {
+        sentAt: parsed.date ?? log.receivedAt ?? new Date(),
+      });
       if (created > 0) reprocessed += 1;
     }
 

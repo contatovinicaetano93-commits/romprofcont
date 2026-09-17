@@ -5,6 +5,7 @@ import {
   isDocumentoOperacional,
   tipoFromKind,
 } from "@/lib/classify-inbound-document";
+import { competenciaFromDate } from "@/lib/competencia";
 import { extractFromContent, extractParcelaLabel, pickMatchingCnpj } from "@/lib/extract-document-fields";
 import { validateDocument } from "@/lib/validate-document";
 
@@ -16,11 +17,13 @@ type ProcessOptions = {
   folder?: string;
   contabilidadeId?: string | null;
   origem?: "email" | "upload";
+  sentAt?: Date;
 };
 
 export type InboundContext = {
   folder?: string;
   contabilidadeId?: string | null;
+  sentAt?: Date;
 };
 
 async function loadValidationContext() {
@@ -83,10 +86,9 @@ export async function processInboundDocument(options: ProcessOptions) {
     })),
   );
 
-  const competencia =
-    result.competencia ||
-    typed.competencia ||
-    `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
+  const competencia = options.sentAt
+    ? competenciaFromDate(options.sentAt)
+    : result.competencia || typed.competencia || competenciaFromDate();
 
   const tipo = tipoFromKind(kind);
 
@@ -118,6 +120,8 @@ export async function processInboundDocument(options: ProcessOptions) {
         fileName: fileName ?? null,
         folder: folder ?? null,
         kind,
+        sentAt: (options.sentAt ?? new Date()).toISOString(),
+        competenciaGuia: typed.competencia ?? result.competencia ?? null,
         parcela: tipo === "Parcelamento" ? extractParcelaLabel(fileName, text, hint) || null : null,
       },
     })
@@ -146,6 +150,7 @@ export async function processInboundParts(
       emailLogId,
       folder: context?.folder,
       contabilidadeId: context?.contabilidadeId,
+      sentAt: context?.sentAt,
     });
     if (id) count += 1;
   }

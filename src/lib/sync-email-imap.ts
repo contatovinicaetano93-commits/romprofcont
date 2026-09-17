@@ -29,10 +29,59 @@ export type SyncEmailResult = {
 
 const DEFAULT_MAX_PER_RUN = 20;
 const RETRY_ATTEMPTS = 3;
+const DEFAULT_LOOKBACK_DAYS = 30;
+const DEFAULT_BUDGET_MS = 240_000;
 
 function maxMessagesPerRun() {
   const raw = Number(process.env.IMAP_MAX_PER_RUN ?? DEFAULT_MAX_PER_RUN);
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX_PER_RUN;
+}
+
+function lookbackDays() {
+  const raw = Number(process.env.IMAP_LOOKBACK_DAYS ?? DEFAULT_LOOKBACK_DAYS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_LOOKBACK_DAYS;
+}
+
+function runBudgetMs() {
+  const raw = Number(process.env.IMAP_BUDGET_MS ?? DEFAULT_BUDGET_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_BUDGET_MS;
+}
+
+function folderUidKey(folder: string, uid: number) {
+  return `${folder}:${uid}`;
+}
+
+function payloadFolderUid(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const folder = "folder" in payload ? payload.folder : undefined;
+  const uid = "uid" in payload ? payload.uid : undefined;
+  if (typeof folder !== "string" || folder.length === 0) return null;
+  if (typeof uid === "number" && Number.isFinite(uid)) {
+    return folderUidKey(folder, uid);
+  }
+  if (typeof uid === "string" && uid.trim() !== "") {
+    const parsed = Number(uid);
+    if (Number.isFinite(parsed)) return folderUidKey(folder, parsed);
+  }
+  return null;
+}
+
+async function loadProcessedMail() {
+  const rows = await getDb()
+    .select({
+      messageId: emailLogs.messageId,
+      rawPayload: emailLogs.rawPayload,
+    })
+    .from(emailLogs);
+
+  const messageIds = new Set<string>();
+  const folderUids = new Set<string>();
+  for (const row of rows) {
+    if (row.messageId) messageIds.add(row.messageId);
+    const key = payloadFolderUid(row.rawPayload);
+    if (key) folderUids.add(key);
+  }
+  return { messageIds, folderUids };
 }
 
 function getImapConfig() {
@@ -322,8 +371,16 @@ async function recordSkippedReply(input: {
 export async function syncEmailInbox(): Promise<SyncEmailResult> {
   const result = emptyResult();
   const maxPerRun = maxMessagesPerRun();
+  const budgetMs = runBudgetMs();
+  const startedAt = Date.now();
   const session = new ImapSession();
   const firms = await loadFirms();
+  const processed = await loadProcessedMail();
+
+  const searchSince = new Date();
+  searchSince.setUTCDate(searchSince.getUTCDate() - lookbackDays());
+
+  const budgetLeft = () => Date.now() - startedAt < budgetMs;
 
   try {
     await session.ensure();
@@ -332,7 +389,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
     const folders = workMailboxes(listed);
 
     for (const folder of folders) {
-      if (slotsUsed(result) >= maxPerRun) break;
+      if (slotsUsed(result) >= maxPerRun || !budgetLeft()) break;
 
       const folderName = folder.name || mailboxLeafName(folder.path, folder.delimiter);
       const firm = await resolveContabilidade(folder.path, folderName, firms);
@@ -344,7 +401,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
       await session.lockMailbox(folder.path);
 
       const uids = await session.run("search", (client) =>
-        client.search({ all: true }, { uid: true }),
+        client.search({ since: searchSince }, { uid: true }),
       );
       if (!Array.isArray(uids) || uids.length === 0) {
         session.dropLock();
@@ -354,7 +411,12 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
       const newestFirst = [...uids].sort((a, b) => Number(b) - Number(a));
 
       for (const uid of newestFirst) {
-        if (slotsUsed(result) >= maxPerRun) break;
+        if (slotsUsed(result) >= maxPerRun || !budgetLeft()) break;
+
+        if (processed.folderUids.has(folderUidKey(folder.path, uid))) {
+          result.skipped += 1;
+          continue;
+        }
 
         try {
           const preview = await session.run("fetch-envelope", (client) =>
@@ -368,6 +430,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
 
           let existing = await findEmailLog(messageId);
           if (existing) {
+            processed.folderUids.add(folderUidKey(folder.path, uid));
             result.skipped += 1;
             await markSeen(session, uid);
             continue;
@@ -389,6 +452,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
               uid,
               reason: envelopeSkip,
             });
+            processed.folderUids.add(folderUidKey(folder.path, uid));
             result.skipped += 1;
             await markSeen(session, uid);
             continue;
@@ -410,6 +474,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
           messageId = parsed.messageId?.trim() || messageId;
           existing = await findEmailLog(messageId);
           if (existing) {
+            processed.folderUids.add(folderUidKey(folder.path, uid));
             result.skipped += 1;
             await markSeen(session, uid);
             continue;
@@ -436,6 +501,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
               reason: parsedSkip,
               receivedAt: parsed.date ?? undefined,
             });
+            processed.folderUids.add(folderUidKey(folder.path, uid));
             result.skipped += 1;
             await markSeen(session, uid);
             continue;
@@ -445,6 +511,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
             (typeof parsed.html === "string" ? parsed.html : "") ||
             "";
 
+          const sentAt = parsed.date ?? message.envelope?.date ?? new Date();
           const [log] = await getDb()
             .insert(emailLogs)
             .values({
@@ -453,10 +520,12 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
               assunto,
               corpo: corpo.slice(0, 8000),
               status: "pending",
-              receivedAt: parsed.date ?? new Date(),
+              receivedAt: sentAt,
               rawPayload: { folder: folder.path, uid },
             })
             .returning({ id: emailLogs.id });
+          processed.folderUids.add(folderUidKey(folder.path, uid));
+          if (messageId) processed.messageIds.add(messageId);
 
           try {
             const parts: Array<{ text: string; fileName?: string }> = [];
@@ -474,6 +543,7 @@ export async function syncEmailInbox(): Promise<SyncEmailResult> {
             const created = await processInboundParts(parts, hint, log.id, {
               folder: folder.path,
               contabilidadeId: firm.id,
+              sentAt,
             });
 
             await getDb()

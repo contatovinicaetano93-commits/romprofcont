@@ -52,35 +52,6 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     return "relatorio";
   }
 
-  const looksLikeDarf =
-    /(^|[^a-z])darf([^a-z]|$)/.test(name) ||
-    blob.includes("documento de arrecadacao de receitas federais");
-
-  const looksLikeDas =
-    name.includes("exibirdas") ||
-    name.includes("pgdasd-das") ||
-    /(^|[^a-z])das([^a-z]|$)/.test(name) ||
-    blob.includes("documento de arrecadacao do simples nacional");
-
-  const looksLikeParcelamento =
-    blob.includes("parcelamento") ||
-    blob.includes("divida ativa") ||
-    blob.includes("dividaativa") ||
-    hasWord(blob, "pgfn") ||
-    name.includes("parcelamento");
-
-  if (looksLikeParcelamento && !looksLikeDas && !looksLikeDarf) {
-    return "guia_parcelamento";
-  }
-
-  const looksLikeInss =
-    hasWord(blob, "inss") ||
-    hasWord(blob, "gps") ||
-    blob.includes("guia da previdencia") ||
-    blob.includes("guia de inss") ||
-    blob.includes("contribuicao previdenciaria") ||
-    blob.includes("documento de arrecadacao do inss");
-
   const looksLikeMensalidade =
     name.includes("honorario") ||
     blob.includes("honorario") ||
@@ -89,18 +60,65 @@ export function classifyInboundDocument(fileName = "", text = ""): InboundKind {
     name.includes("servicos_vencto") ||
     name.includes("servicos-vencto");
 
-  if (looksLikeInss && !looksLikeDas && !looksLikeMensalidade) {
+  if (looksLikeMensalidade) {
+    return "mensalidade";
+  }
+
+  const looksLikeParcelamentoFile =
+    name.includes("parcelamento") ||
+    /parc(?:elamento|[.\s_-])/.test(name) ||
+    name.includes("divida ativa") ||
+    name.includes("dividaativa");
+
+  const looksLikeOfficialDas =
+    name.includes("exibirdas") ||
+    name.includes("pgdasd-das") ||
+    blob.includes("documento de arrecadacao do simples nacional");
+
+  if (looksLikeParcelamentoFile && !looksLikeOfficialDas) {
+    return "guia_parcelamento";
+  }
+
+  const looksLikeParcelamentoText =
+    blob.includes("parcelamento") ||
+    blob.includes("divida ativa") ||
+    blob.includes("dividaativa") ||
+    hasWord(blob, "pgfn");
+
+  if (looksLikeParcelamentoText && !looksLikeOfficialDas) {
+    return "guia_parcelamento";
+  }
+
+  const looksLikeInss =
+    name.includes("guiapagamento") ||
+    hasWord(name, "inss") ||
+    hasWord(name, "gps") ||
+    hasWord(blob, "inss") ||
+    hasWord(blob, "gps") ||
+    blob.includes("guia da previdencia") ||
+    blob.includes("guia de inss") ||
+    blob.includes("pro-labore") ||
+    blob.includes("pro labore") ||
+    blob.includes("contribuicao previdenciaria") ||
+    blob.includes("documento de arrecadacao do inss");
+
+  if (looksLikeInss && !looksLikeOfficialDas) {
     return "guia_inss";
   }
-  if (looksLikeDarf && !looksLikeDas) {
-    return "guia_darf";
-  }
+
+  const looksLikeDas =
+    looksLikeOfficialDas || /(^|[^a-z])das([^a-z]|$)/.test(name);
+
   if (looksLikeDas) {
     return "guia_das";
   }
 
-  if (looksLikeMensalidade) {
-    return "mensalidade";
+  const looksLikeDarf =
+    /(^|[^a-z])darf([^a-z]|$)/.test(name) ||
+    blob.includes("documento de arrecadacao de receitas federais");
+
+  if (looksLikeDarf) {
+    return "guia_darf";
   }
 
   return "ignorado";
