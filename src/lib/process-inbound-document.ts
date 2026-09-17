@@ -65,6 +65,7 @@ async function loadLiveDuplicatesByFileName(fileName: string) {
       profissionalId: documentos.profissionalId,
       cnpj: documentos.cnpj,
       tipo: documentos.tipo,
+      competencia: documentos.competencia,
     })
     .from(documentos)
     .where(
@@ -86,6 +87,7 @@ export async function archiveLiveDuplicateDocuments() {
       profissionalId: documentos.profissionalId,
       cnpj: documentos.cnpj,
       tipo: documentos.tipo,
+      competencia: documentos.competencia,
     })
     .from(documentos)
     .where(inArray(documentos.status, [...LIVE_DUPLICATE_STATUSES]));
@@ -168,6 +170,7 @@ export async function processInboundDocument(options: ProcessOptions) {
         profissionalId: result.profissionalId,
         cnpj: cnpjFinal,
         tipo,
+        competencia,
       },
       live,
     );

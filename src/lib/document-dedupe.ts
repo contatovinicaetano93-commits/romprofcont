@@ -1,3 +1,4 @@
+import { competenciaMonth } from "@/lib/competencia";
 import { normalizeCnpj } from "@/lib/types";
 
 export const LIVE_DUPLICATE_STATUSES = [
@@ -17,6 +18,7 @@ export type DedupeCandidate = {
   profissionalId?: string | null;
   cnpj?: string | null;
   tipo?: string | null;
+  competencia?: string | null;
 };
 
 export function isLiveDuplicateStatus(status: string) {
@@ -42,7 +44,13 @@ function identityKey(profissionalId?: string | null, cnpj?: string | null) {
   if (profissionalId) return `p:${profissionalId}`;
   const digits = normalizeCnpj(cnpj ?? "");
   if (digits.length === 14) return `c:${digits}`;
-  return "unknown";
+  return null;
+}
+
+function normalizeDedupeCompetencia(competencia?: string | null) {
+  if (competencia == null || competencia === "") return null;
+  const month = competenciaMonth(competencia);
+  return month || null;
 }
 
 export function documentDedupeKey(input: {
@@ -51,13 +59,18 @@ export function documentDedupeKey(input: {
   profissionalId?: string | null;
   cnpj?: string | null;
   tipo?: string | null;
+  competencia?: string | null;
 }) {
   const fileName = normalizeDedupeFileName(input.fileName);
   if (!fileName) return null;
   const valor = normalizeDedupeValor(input.valor);
   if (valor == null) return null;
+  const competencia = normalizeDedupeCompetencia(input.competencia);
+  if (competencia == null) return null;
+  const identity = identityKey(input.profissionalId, input.cnpj);
+  if (!identity) return null;
   const tipo = (input.tipo ?? "").trim().toLowerCase();
-  return `${fileName}|${valor}|${tipo}|${identityKey(input.profissionalId, input.cnpj)}`;
+  return `${fileName}|${valor}|${tipo}|${identity}|${competencia}`;
 }
 
 function createdAtMs(value: Date | string) {
