@@ -1,5 +1,3 @@
-import { syncEmailInbox } from "@/lib/sync-email-imap";
-
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
@@ -10,19 +8,18 @@ function authorize(request: Request) {
   return auth === `Bearer ${secret}`;
 }
 
+const PAUSED_RESPONSE = {
+  ok: true,
+  paused: true,
+  reason: "Leitura automática do e-mail fiscal está pausada.",
+};
+
 export async function GET(request: Request) {
   if (!authorize(request)) {
     return Response.json({ error: "Não autorizado" }, { status: 401 });
   }
 
-  try {
-    const result = await syncEmailInbox();
-    return Response.json({ ok: true, ...result });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erro interno";
-    console.error("[sync-email]", message);
-    return Response.json({ error: message }, { status: 500 });
-  }
+  return Response.json(PAUSED_RESPONSE);
 }
 
 export async function POST(request: Request) {
